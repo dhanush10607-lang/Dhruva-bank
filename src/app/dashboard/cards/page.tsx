@@ -15,12 +15,12 @@ export default function CardsPage() {
   const [state, formAction, isPending] = useActionState(requestCard, null);
 
   const gradients = [
-    "from-blue-600 via-indigo-600 to-indigo-900", // Blue/Indigo
-    "from-emerald-500 via-teal-600 to-cyan-700",  // Teal/Cyan
-    "from-rose-500 via-pink-600 to-purple-800",   // Rose/Purple
-    "from-amber-500 via-orange-600 to-red-700",   // Gold/Red
-    "from-violet-600 via-fuchsia-700 to-purple-900", // Violet/Fuchsia
-    "from-slate-700 via-zinc-800 to-black"        // Obsidian Premium
+    "from-slate-900 via-blue-950 to-slate-900",    // Midnight Blue
+    "from-zinc-900 via-zinc-800 to-black",         // Obsidian Black
+    "from-blue-900 via-blue-800 to-indigo-950",    // Royal Navy
+    "from-stone-800 via-stone-900 to-neutral-950", // Charcoal
+    "from-emerald-950 via-teal-950 to-slate-900",  // Deep Forest
+    "from-indigo-950 via-slate-900 to-blue-950"    // Deep Indigo
   ];
 
   const getCardGradient = (id: string) => {
