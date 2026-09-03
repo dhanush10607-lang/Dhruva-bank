@@ -340,3 +340,30 @@ FOR SELECT USING (
     WHERE users.id = auth.uid() AND users.role = 'ADMIN'
   )
 );
+
+-- ==========================================
+-- INDEXES FOR SCALABILITY & PERFORMANCE
+-- ==========================================
+
+-- 1. Foreign Key Indexes (Prevents full table scans on joins)
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_beneficiaries_user_id ON public.beneficiaries(user_id);
+CREATE INDEX IF NOT EXISTS idx_cards_account_id ON public.cards(account_id);
+CREATE INDEX IF NOT EXISTS idx_loans_user_id ON public.loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_fixed_deposits_user_id ON public.fixed_deposits(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
+
+-- 2. Time-Series Indexes (Optimizes sorting and filtering by date)
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+
+-- 3. High-Frequency Query Indexes (Optimizes WHERE clauses)
+CREATE INDEX IF NOT EXISTS idx_users_status ON public.users(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+CREATE INDEX IF NOT EXISTS idx_loans_status ON public.loans(status);
+CREATE INDEX IF NOT EXISTS idx_users_customer_id ON public.users(customer_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_account_number ON public.accounts(account_number);
+CREATE INDEX IF NOT EXISTS idx_transactions_reference_number ON public.transactions(reference_number);

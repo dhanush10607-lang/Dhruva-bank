@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 import bcrypt from "bcryptjs";
 
-export async function getUserProfile() {
+export const getUserProfile = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -17,9 +18,9 @@ export async function getUserProfile() {
     .single();
     
   return profile;
-}
+});
 
-export async function getUserAccount() {
+export const getUserAccount = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -32,7 +33,7 @@ export async function getUserAccount() {
     .single();
     
   return account;
-}
+});
 
 export async function getUserTransactions() {
   const supabase = await createClient();

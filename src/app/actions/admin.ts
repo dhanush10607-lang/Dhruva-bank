@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 
 // Verify if the current user is an admin
-export async function verifyAdmin() {
+export const verifyAdmin = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -17,7 +18,7 @@ export async function verifyAdmin() {
     .single();
     
   return profile?.role === "ADMIN" || profile?.role === "SUPER_ADMIN";
-}
+});
 
 export async function getAllUsers() {
   const isAdmin = await verifyAdmin();
@@ -62,7 +63,7 @@ export async function getAllCards() {
   return data;
 }
 
-export async function getDashboardStats() {
+export const getDashboardStats = cache(async () => {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) throw new Error("Unauthorized");
 
@@ -95,7 +96,7 @@ export async function getDashboardStats() {
     totalDeposits,
     activeCards: activeCards || 0,
   };
-}
+});
 
 // ==========================================
 // LOANS & SUPPORT (ADMIN)
@@ -156,7 +157,7 @@ export async function getTransactionVolumeData() {
   }));
 
   return chartData;
-}
+});
 
 export async function approveLoan(loanId: string) {
   const supabase = await createClient();
