@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dhruva Bank</string>
+    <string name="title_activity_main">Dhruva Bank</string>
+    <string name="package_name">com.dhruvabank.app</string>
+    <string name="custom_url_scheme">com.dhruvabank.app</string>
+</resources>

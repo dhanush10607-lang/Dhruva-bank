@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { formatCompactCurrency } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const profile = await getUserProfile();
@@ -19,7 +20,7 @@ export default async function DashboardPage() {
   const recentTransactions = transactions.slice(0, 5);
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Good Morning, {profile?.full_name.split(' ')[0]}</h1>
@@ -44,12 +45,12 @@ export default async function DashboardPage() {
           <div className="relative z-10">
             <p className="text-blue-100 mb-2">Available Balance</p>
             <h2 className="text-5xl font-bold mb-8">
-              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(account?.balance || 0)}
+              {formatCompactCurrency(account?.balance || 0)}
             </h2>
             
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-blue-200 text-sm mb-1">Account Number (Demo)</p>
+                <p className="text-blue-200 text-sm mb-1">Account Number</p>
                 <p className="font-mono text-lg tracking-wider">{account?.account_number}</p>
               </div>
               <div className="text-right">

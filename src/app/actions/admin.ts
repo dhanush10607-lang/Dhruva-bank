@@ -101,6 +101,63 @@ export async function getDashboardStats() {
 // LOANS & SUPPORT (ADMIN)
 // ==========================================
 
+export async function getTransactionVolumeData() {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+  
+  // Get transactions for the last 7 days
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("created_at, amount, type")
+    .gte("created_at", sevenDaysAgo.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  // Group by day (YYYY-MM-DD)
+  const groupedData: Record<string, { credits: number, debits: number }> = {};
+  
+  // Initialize last 7 days with 0
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    // Formatting as Mon, Tue, etc.
+    const dayName = d.toLocaleDateString("en-US", { weekday: 'short' });
+    groupedData[dayName] = { credits: 0, debits: 0 };
+  }
+
+  // Aggregate the data
+  if (data) {
+    data.forEach(tx => {
+      const date = new Date(tx.created_at);
+      const dayName = date.toLocaleDateString("en-US", { weekday: 'short' });
+      
+      if (groupedData[dayName]) {
+        if (tx.type === "CREDIT") {
+          groupedData[dayName].credits += Number(tx.amount);
+        } else if (tx.type === "DEBIT") {
+          groupedData[dayName].debits += Number(tx.amount);
+        }
+      }
+    });
+  }
+
+  // Convert to array for Recharts
+  const chartData = Object.keys(groupedData).map(day => ({
+    name: day,
+    credits: groupedData[day].credits,
+    debits: groupedData[day].debits
+  }));
+
+  return chartData;
+}
+
 export async function approveLoan(loanId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -851,4 +908,44 @@ export async function debitAccount(prevState: any, formData: FormData) {
   }
 
   return { success: true, message: `Successfully debited ₹${amount} from account ${accountNumber}` };
+}
+
+export async function updateUserStatus(userId: string, newStatus: string) {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("users")
+    .update({ 
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", userId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function updateCardStatus(cardId: string, newStatus: string) {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("cards")
+    .update({ 
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", cardId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/cards");
+  return { success: true };
 }

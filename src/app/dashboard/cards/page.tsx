@@ -104,7 +104,9 @@ export default function CardsPage() {
           {/* Virtual Card Display */}
           <div className="space-y-6">
               <div className={`relative p-8 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
-              card.status === 'FROZEN'
+              card.status === 'BLOCKED'
+                ? 'bg-gradient-to-br from-red-800 to-red-950 opacity-90'
+                : card.status === 'FROZEN'
                 ? 'bg-gradient-to-br from-zinc-500 to-zinc-700 opacity-90 grayscale' 
                 : `bg-gradient-to-br ${getCardGradient(card.id)}`
             }`}>
@@ -154,12 +156,12 @@ export default function CardsPage() {
             <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
               <div>
                 <p className="font-semibold text-zinc-900 dark:text-white">Card Status</p>
-                <p className="text-sm text-zinc-500">{card.status === 'FROZEN' ? 'Temporarily Frozen' : 'Active and ready to use'}</p>
+                <p className="text-sm text-zinc-500">{card.status === 'BLOCKED' ? 'Permanently Blocked' : card.status === 'FROZEN' ? 'Temporarily Frozen' : 'Active and ready to use'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-3 w-3">
-                  {card.status !== 'FROZEN' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-3 w-3 ${card.status === 'FROZEN' ? 'bg-zinc-400' : 'bg-green-500'}`}></span>
+                  {card.status === 'ACTIVE' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                  <span className={`relative inline-flex rounded-full h-3 w-3 ${card.status === 'BLOCKED' ? 'bg-red-500' : card.status === 'FROZEN' ? 'bg-zinc-400' : 'bg-green-500'}`}></span>
                 </span>
               </div>
             </div>
@@ -184,10 +186,10 @@ export default function CardsPage() {
                   </div>
                   <button 
                     onClick={handleFreezeToggle}
-                    disabled={isTogglingFreeze}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${card.status === 'FROZEN' ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                    disabled={isTogglingFreeze || card.status === 'BLOCKED'}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${card.status === 'FROZEN' || card.status === 'BLOCKED' ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-700'} disabled:opacity-50`}
                   >
-                    <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${card.status === 'FROZEN' ? 'translate-x-6' : 'translate-x-0'}`}></span>
+                    <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${card.status === 'FROZEN' || card.status === 'BLOCKED' ? 'translate-x-6' : 'translate-x-0'}`}></span>
                   </button>
                 </div>
 
@@ -204,8 +206,8 @@ export default function CardsPage() {
                   </div>
                   <button 
                     onClick={handleIntlToggle}
-                    disabled={isTogglingIntl}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${card.international_enabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                    disabled={isTogglingIntl || card.status === 'BLOCKED'}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${card.international_enabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-700'} disabled:opacity-50`}
                   >
                     <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${card.international_enabled ? 'translate-x-6' : 'translate-x-0'}`}></span>
                   </button>

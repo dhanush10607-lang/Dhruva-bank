@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 
 export async function registerUser(prevState: any, formData: FormData) {
@@ -86,6 +87,35 @@ export async function loginUser(prevState: any, formData: FormData) {
     return { error: "Your account has been temporarily suspended." };
   }
 
+  // Log the session (Update if same device/IP exists)
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent") || "Unknown Device";
+  const ipAddress = headersList.get("x-forwarded-for") || "127.0.0.1";
+  
+  const { data: existingLogs } = await supabase
+    .from("audit_logs")
+    .select("id")
+    .eq("user_id", data.user.id)
+    .eq("action", "LOGIN")
+    .eq("user_agent", userAgent)
+    .eq("ip_address", ipAddress)
+    .limit(1);
+
+  if (existingLogs && existingLogs.length > 0) {
+    await supabase
+      .from("audit_logs")
+      .update({ created_at: new Date().toISOString() })
+      .eq("id", existingLogs[0].id);
+  } else {
+    await supabase.from("audit_logs").insert({
+      user_id: data.user.id,
+      action: "LOGIN",
+      entity_type: "SESSION",
+      user_agent: userAgent,
+      ip_address: ipAddress
+    });
+  }
+
   revalidatePath("/", "layout");
   
   if (userProfile.role === "ADMIN" || userProfile.role === "SUPER_ADMIN") {
@@ -99,4 +129,11 @@ export async function logoutUser() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function logoutOtherDevices() {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signOut({ scope: "others" });
+  if (error) return { error: error.message };
+  return { success: true, message: "Successfully signed out of all other devices" };
 }

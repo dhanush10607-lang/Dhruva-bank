@@ -1,5 +1,6 @@
 import { CreditCard } from "lucide-react";
 import { getAllCards } from "@/app/actions/admin";
+import CardStatusDropdown from "./CardStatusDropdown";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +51,7 @@ export default async function AdminCardsPage() {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-md ${
-                        card.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
-                        card.status === 'FROZEN' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                        {card.status}
-                      </span>
+                      <CardStatusDropdown card={card} />
                     </td>
                     <td className="p-4 text-sm text-zinc-500">
                       {new Date(card.created_at).toLocaleDateString()}

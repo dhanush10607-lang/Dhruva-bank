@@ -1,12 +1,17 @@
-import { getUserProfile } from "@/app/actions/user";
+import { getUserProfile, getUserSessions } from "@/app/actions/user";
 import { Lock, Smartphone, Key } from "lucide-react";
 import SecureLockToggle from "./SecureLockToggle";
 import { Button } from "@/components/ui/button";
+import ChangeMpinModal from "./ChangeMpinModal";
+import ChangePasswordModal from "./ChangePasswordModal";
+import SignOutOthersButton from "./SignOutOthersButton";
+import ClearSessionsButton from "./ClearSessionsButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function SecurityCenterPage() {
   const profile = await getUserProfile();
+  const sessions = await getUserSessions();
 
   if (!profile) return null;
 
@@ -33,7 +38,7 @@ export default async function SecurityCenterPage() {
                     <p className="text-xs text-zinc-500">Update your 4-digit transaction pin</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Update</Button>
+                <ChangeMpinModal />
               </div>
               <div className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
@@ -43,7 +48,7 @@ export default async function SecurityCenterPage() {
                     <p className="text-xs text-zinc-500">Update your login password</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Update</Button>
+                <ChangePasswordModal />
               </div>
             </div>
           </div>
@@ -52,16 +57,32 @@ export default async function SecurityCenterPage() {
         {/* Sidebar info */}
         <div className="space-y-6">
           <div className="bg-zinc-100 dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800">
-            <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">Active Sessions</h3>
-            <div className="flex items-start gap-3 mb-4">
-              <Smartphone className="text-zinc-400 shrink-0" size={18} />
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-white">Windows PC (Current)</p>
-                <p className="text-xs text-zinc-500">Chrome Browser</p>
-                <p className="text-xs text-green-600 mt-1">Active now</p>
+            <h3 className="font-semibold text-zinc-900 dark:text-white mb-4">Recent Logins</h3>
+            
+            {sessions.length > 0 ? (
+              <div className="space-y-4 mb-4">
+                {sessions.map((session, index) => (
+                  <div key={session.id} className="flex items-start gap-3">
+                    <Smartphone className="text-zinc-400 shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-white truncate max-w-[200px]" title={session.user_agent}>
+                        {session.user_agent.split(' ').slice(0, 3).join(' ')}
+                      </p>
+                      <p className="text-xs text-zinc-500">IP: {session.ip_address}</p>
+                      <p className="text-[10px] text-zinc-400 mt-1">{new Date(session.created_at).toLocaleString()}</p>
+                      {index === 0 && <p className="text-xs font-medium text-green-600 mt-1">Active now</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="text-sm text-zinc-500 mb-4">No recent sessions found.</p>
+            )}
+            
+            <div className="flex flex-col gap-2">
+              <SignOutOthersButton />
+              <ClearSessionsButton />
             </div>
-            <Button variant="outline" className="w-full text-xs" size="sm">Sign out of all other devices</Button>
           </div>
         </div>
       </div>

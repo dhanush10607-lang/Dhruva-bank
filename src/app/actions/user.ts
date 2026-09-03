@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 
 export async function getUserProfile() {
   const supabase = await createClient();
@@ -687,4 +689,124 @@ export async function toggleCardInternational(cardId: string, currentEnabled: bo
 
   if (error) return { error: error.message };
   return { success: true, newEnabled: !currentEnabled };
+}
+
+export async function changeMpin(prevState: any, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const currentMpin = formData.get("currentMpin") as string;
+  const newMpin = formData.get("newMpin") as string;
+  const confirmMpin = formData.get("confirmMpin") as string;
+
+  if (!currentMpin || !newMpin || !confirmMpin) return { error: "All fields are required" };
+  if (newMpin !== confirmMpin) return { error: "New MPINs do not match" };
+  if (newMpin.length !== 4) return { error: "MPIN must be 4 digits" };
+
+  // Fetch current user profile to verify old MPIN
+  const { data: profile } = await supabase
+    .from("users")
+    .select("mpin_hash")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) return { error: "User profile not found" };
+
+  const isMpinCorrect = await bcrypt.compare(currentMpin, profile.mpin_hash);
+  if (!isMpinCorrect) {
+    return { error: "Current MPIN is incorrect" };
+  }
+
+  const newMpinHash = await bcrypt.hash(newMpin, 10);
+
+  const { error } = await supabase
+    .from("users")
+    .update({ mpin_hash: newMpinHash })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  return { success: true, message: "MPIN updated successfully" };
+}
+
+export async function changePassword(prevState: any, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !user.email) return { error: "Unauthorized" };
+
+  const currentPassword = formData.get("currentPassword") as string;
+  const newPassword = formData.get("newPassword") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+
+  if (!currentPassword || !newPassword || !confirmPassword) return { error: "All fields are required" };
+  if (newPassword !== confirmPassword) return { error: "New passwords do not match" };
+  if (newPassword.length < 6) return { error: "Password must be at least 6 characters" };
+
+  // Verify current password by attempting to sign in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (signInError) {
+    return { error: "Current password is incorrect" };
+  }
+
+  // Update password
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  return { success: true, message: "Password updated successfully" };
+}
+
+export async function getUserSessions() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("action", "LOGIN")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  if (error || !data) return [];
+  return data;
+}
+
+export async function clearLoginHistory() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  // Get the latest session ID to keep it
+  const { data: latestSession } = await supabase
+    .from("audit_logs")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("action", "LOGIN")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (latestSession) {
+    const { error } = await supabase
+      .from("audit_logs")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("action", "LOGIN")
+      .neq("id", latestSession.id);
+      
+    if (error) return { error: error.message };
+  }
+  
+  revalidatePath("/dashboard/security");
+  return { success: true, message: "Login history cleared" };
 }

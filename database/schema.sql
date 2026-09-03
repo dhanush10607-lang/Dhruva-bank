@@ -118,6 +118,20 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.beneficiaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Audit Logs can be read and inserted by the owner
+CREATE POLICY "Users can read own audit logs" 
+ON public.audit_logs FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own audit logs" 
+ON public.audit_logs FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own audit logs" 
+ON public.audit_logs FOR DELETE 
+USING (auth.uid() = user_id);
 
 -- Users can read their own profile
 CREATE POLICY "Users can read own profile" 

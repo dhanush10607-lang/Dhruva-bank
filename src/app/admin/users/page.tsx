@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
 import { getAllUsers } from "@/app/actions/admin";
+import UserStatusDropdown from "./UserStatusDropdown";
 
 export const dynamic = "force-dynamic";
 
@@ -52,13 +53,7 @@ export default async function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-md ${
-                        user.status === 'APPROVED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
-                        user.status === 'PENDING' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                        {user.status}
-                      </span>
+                      <UserStatusDropdown user={user} />
                     </td>
                     <td className="p-4 text-sm text-zinc-500">
                       {new Date(user.created_at).toLocaleDateString()}
