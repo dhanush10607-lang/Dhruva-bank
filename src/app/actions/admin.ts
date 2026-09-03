@@ -102,7 +102,7 @@ export const getDashboardStats = cache(async () => {
 // LOANS & SUPPORT (ADMIN)
 // ==========================================
 
-export async function getTransactionVolumeData() {
+export const getTransactionVolumeData = cache(async () => {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) throw new Error("Unauthorized");
 
