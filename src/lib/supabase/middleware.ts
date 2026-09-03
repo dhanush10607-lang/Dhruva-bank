@@ -57,5 +57,13 @@ export async function updateSession(request: NextRequest) {
   // will be handled in a higher-order component or specific layouts 
   // to avoid making extra DB calls on every single request in middleware.
 
+  // Set Security Headers
+  supabaseResponse.headers.set('X-DNS-Prefetch-Control', 'on')
+  supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  supabaseResponse.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff')
+  supabaseResponse.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+
   return supabaseResponse
 }
+
