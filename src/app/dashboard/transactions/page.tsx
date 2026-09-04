@@ -69,8 +69,8 @@ export default async function TransactionsPage(props: { searchParams: Promise<{ 
                 {transactions.map((tx: any) => (
                   <tr key={tx.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td className="p-4 whitespace-nowrap text-sm text-zinc-500">
-                      <div>{new Date(tx.created_at).toLocaleDateString('en-IN')}</div>
-                      <div className="text-xs text-zinc-400">{new Date(tx.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div>{new Date(tx.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+                      <div className="text-xs text-zinc-400">{new Date(tx.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">

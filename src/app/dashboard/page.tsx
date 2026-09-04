@@ -159,7 +159,7 @@ export default async function DashboardPage() {
                     </div>
                     <div>
                       <p className="font-medium text-zinc-900 dark:text-white">{tx.description || (tx.type === 'CREDIT' ? 'Deposit' : 'Withdrawal')}</p>
-                      <p className="text-xs text-zinc-500">{new Date(tx.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-zinc-500">{new Date(tx.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
                     </div>
                   </div>
                   <div className="text-right">
