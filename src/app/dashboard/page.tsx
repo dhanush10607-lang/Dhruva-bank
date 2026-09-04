@@ -15,6 +15,8 @@ import SpendingChart from "./SpendingChart";
 
 export default async function DashboardPage() {
   const profile = await getUserProfile();
+  if (!profile) return null;
+  
   const account = await getUserAccount();
   const { data: recentTransactions } = await getUserTransactions(5, 0);
   const spendingData = await getMonthlySpending();
