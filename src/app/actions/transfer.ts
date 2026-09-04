@@ -63,14 +63,14 @@ export async function processTransfer(prevState: any, formData: FormData) {
   // For this demonstration, we'll perform them sequentially.
 
   // 1. Deduct from sender
-  const newSenderBalance = account.balance - amount;
+  const newSenderBalance = Number(account.balance) - amount;
   await supabase
     .from("accounts")
     .update({ balance: newSenderBalance })
     .eq("id", account.id);
 
   // 2. Add to receiver
-  const newReceiverBalance = receiverAccount.balance + amount;
+  const newReceiverBalance = Number(receiverAccount.balance) + amount;
   await supabase
     .from("accounts")
     .update({ balance: newReceiverBalance })
