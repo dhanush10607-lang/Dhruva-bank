@@ -715,7 +715,10 @@ export const getScheduledTransfers = cache(async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const supabaseAdmin = createAdminClient();
+
+  const { data } = await supabaseAdmin
     .from("scheduled_transfers")
     .select("*")
     .eq("user_id", user.id)
@@ -774,12 +777,18 @@ export async function createScheduledTransfer(formData: FormData) {
 
 export async function cancelScheduledTransfer(formData: FormData) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const supabaseAdmin = createAdminClient();
   const id = formData.get("id") as string;
 
-  await supabase
+  await supabaseAdmin
     .from("scheduled_transfers")
     .update({ status: 'CANCELLED' })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id); // Ensure they own it
 
   revalidatePath("/dashboard/scheduled");
 }
