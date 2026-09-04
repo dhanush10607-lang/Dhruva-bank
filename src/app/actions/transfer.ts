@@ -64,20 +64,22 @@ export async function processTransfer(prevState: any, formData: FormData) {
 
   // 1. Deduct from sender
   const newSenderBalance = Number(account.balance) - amount;
-  await supabase
+  const { error: err1 } = await supabase
     .from("accounts")
     .update({ balance: newSenderBalance })
     .eq("id", account.id);
+  if (err1) return { error: `Sender balance update failed: ${err1.message}` };
 
   // 2. Add to receiver
   const newReceiverBalance = Number(receiverAccount.balance) + amount;
-  await supabase
+  const { error: err2 } = await supabase
     .from("accounts")
     .update({ balance: newReceiverBalance })
     .eq("id", receiverAccount.id);
+  if (err2) return { error: `Receiver balance update failed: ${err2.message}` };
 
   // 3. Create Sender Ledger Entry (DEBIT)
-  await supabase.from("transactions").insert({
+  const { error: err3 } = await supabase.from("transactions").insert({
     account_id: account.id,
     reference_number: `${referenceNumber}-D`,
     type: "DEBIT",
@@ -87,9 +89,10 @@ export async function processTransfer(prevState: any, formData: FormData) {
     sender_details: account.account_number,
     receiver_details: receiverAccountNumber,
   });
+  if (err3) return { error: `Sender ledger entry failed: ${err3.message}` };
 
   // 4. Create Receiver Ledger Entry (CREDIT)
-  await supabase.from("transactions").insert({
+  const { error: err4 } = await supabase.from("transactions").insert({
     account_id: receiverAccount.id,
     reference_number: `${referenceNumber}-C`,
     type: "CREDIT",
@@ -99,6 +102,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
     sender_details: account.account_number,
     receiver_details: receiverAccountNumber,
   });
+  if (err4) return { error: `Receiver ledger entry failed: ${err4.message}` };
 
   // 5. Notifications
   await supabase.from("notifications").insert([
