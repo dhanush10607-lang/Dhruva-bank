@@ -10,10 +10,9 @@ export default function RequestMoneyPage() {
   const [copied, setCopied] = useState(false);
   const [generated, setGenerated] = useState(false);
 
-  // In a real app, this would be a dynamic link to your app's transfer route with query params
-  // Using localhost/demo domain for illustration
-  const paymentLink = `https://dhruvabank.demo/transfer?amount=${amount}&desc=${encodeURIComponent(description)}&to=self`;
-  
+  // Using the actual window origin or fallback to production URL
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dhruvabank.vercel.app';
+  const paymentLink = `${baseUrl}/dashboard/transfer?amount=${amount}&desc=${encodeURIComponent(description)}&to=self`;
   // Using a free public API for QR code generation to avoid npm dependencies
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentLink)}&color=09090b`;
 
