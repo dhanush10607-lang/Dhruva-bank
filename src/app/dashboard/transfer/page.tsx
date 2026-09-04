@@ -125,6 +125,29 @@ export default function TransferPage({ searchParams }: { searchParams: Promise<{
                     placeholder="e.g. Rent Payment"
                   />
                 </div>
+
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Category (Optional)
+                  </label>
+                  <select
+                    id="category"
+                    name="category"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  >
+                    <option value="">Uncategorized</option>
+                    <option value="GROCERIES">Groceries</option>
+                    <option value="RENT">Rent & Housing</option>
+                    <option value="FOOD_AND_DINING">Food & Dining</option>
+                    <option value="UTILITIES">Utilities & Bills</option>
+                    <option value="TRAVEL">Travel</option>
+                    <option value="ENTERTAINMENT">Entertainment</option>
+                    <option value="HEALTHCARE">Healthcare</option>
+                    <option value="SHOPPING">Shopping</option>
+                    <option value="EDUCATION">Education</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-4 pt-2">

@@ -23,6 +23,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
   const receiverAccountNumber = formData.get("account_number") as string;
   const amount = parseFloat(formData.get("amount") as string);
   const description = formData.get("description") as string;
+  const category = formData.get("category") as string || "UNCATEGORIZED";
   const mpin = formData.get("mpin") as string;
 
   if (!receiverAccountNumber || !amount || !mpin) {
@@ -88,6 +89,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
     amount: amount,
     balance_after: newSenderBalance,
     description: description || `Transfer to ${receiverAccountNumber}`,
+    category: category,
     sender_details: account.account_number,
     receiver_details: receiverAccountNumber,
   });
@@ -101,6 +103,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
     amount: amount,
     balance_after: newReceiverBalance,
     description: description || `Transfer received from ${account.account_number}`,
+    category: category,
     sender_details: account.account_number,
     receiver_details: receiverAccountNumber,
   });
