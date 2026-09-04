@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/api/') || request.nextUrl.pathname.startsWith('/dashboard')) {
     if (ratelimit) {
       // Use IP as the identifier
-      const ip = request.headers.get('x-forwarded-for') ?? request.ip ?? '127.0.0.1';
+      const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
       const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
       if (!success) {

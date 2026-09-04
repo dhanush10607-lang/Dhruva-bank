@@ -115,28 +115,18 @@ export default async function TransactionsPage(props: { searchParams: Promise<{ 
               Showing {offset + 1} to {Math.min(offset + limit, total)} of {total} transactions
             </p>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                disabled={page <= 1}
-                asChild={page > 1}
+              <a 
+                href={`/dashboard/transactions?page=${page - 1}`}
+                className={`px-4 py-2 text-sm font-medium border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 ${page <= 1 ? 'opacity-50 pointer-events-none' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
               >
-                {page > 1 ? (
-                  <a href={`/dashboard/transactions?page=${page - 1}`}>Previous</a>
-                ) : (
-                  <span>Previous</span>
-                )}
-              </Button>
-              <Button 
-                variant="outline"
-                disabled={offset + limit >= total}
-                asChild={offset + limit < total}
+                Previous
+              </a>
+              <a 
+                href={`/dashboard/transactions?page=${page + 1}`}
+                className={`px-4 py-2 text-sm font-medium border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 ${offset + limit >= total ? 'opacity-50 pointer-events-none' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
               >
-                {offset + limit < total ? (
-                  <a href={`/dashboard/transactions?page=${page + 1}`}>Next</a>
-                ) : (
-                  <span>Next</span>
-                )}
-              </Button>
+                Next
+              </a>
             </div>
           </div>
         )}
