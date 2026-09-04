@@ -29,10 +29,17 @@ export default async function ProfilePage() {
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{profile.full_name}</h2>
               <p className="text-sm text-zinc-500">Dhruva Bank Customer</p>
               
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                KYC Verified
-              </div>
+              {profile.status === 'APPROVED' ? (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  KYC Verified
+                </div>
+              ) : (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full">
+                  <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></div>
+                  KYC Pending
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
@@ -87,6 +94,14 @@ export default async function ProfilePage() {
                 <span className="text-blue-700/70 dark:text-blue-400/70">Aadhaar: </span>
                 <span className="font-mono text-blue-900 dark:text-blue-300">•••• •••• {profile.aadhaar_demo?.slice(-4) || 'XXXX'}</span>
               </div>
+              {profile.status === 'PENDING' ? (
+                <div className="mt-4 pt-4 border-t border-blue-100/50 dark:border-blue-900/30">
+                  <button onClick={() => alert("File picker simulated. In production, this would open a file upload dialog for PAN/Aadhaar images.")} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    Upload KYC Documents
+                  </button>
+                  <p className="text-xs text-center text-blue-700/60 mt-2">Maximum file size: 5MB</p>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

@@ -51,6 +51,34 @@ export const getUserTransactions = cache(async (limit: number = 50, offset: numb
   return { data: transactions || [], total: count || 0 };
 });
 
+export const getMonthlySpending = cache(async () => {
+  const supabase = await createClient();
+  const account = await getUserAccount();
+  if (!account) return [];
+
+  // Get last 30 days date
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const { data } = await supabase
+    .from("transactions")
+    .select("category, amount")
+    .eq("account_id", account.id)
+    .eq("type", "DEBIT")
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  if (!data) return [];
+
+  // Aggregate by category
+  const aggregated: Record<string, number> = {};
+  data.forEach(tx => {
+    const cat = tx.category || 'UNCATEGORIZED';
+    aggregated[cat] = (aggregated[cat] || 0) + Number(tx.amount);
+  });
+
+  return Object.entries(aggregated).map(([name, value]) => ({ name, value }));
+});
+
 export async function getUserCard() {
   const supabase = await createClient();
   const account = await getUserAccount();

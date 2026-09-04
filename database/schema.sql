@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     fee DECIMAL(15,2) DEFAULT 0.00,
     balance_after DECIMAL(15,2) NOT NULL,
     description TEXT,
+    category VARCHAR(50) DEFAULT 'UNCATEGORIZED',
     status VARCHAR(20) DEFAULT 'COMPLETED' CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REVERSED')),
     sender_details TEXT,
     receiver_details TEXT,

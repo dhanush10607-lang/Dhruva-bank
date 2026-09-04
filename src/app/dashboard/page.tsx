@@ -1,4 +1,4 @@
-import { getUserAccount, getUserTransactions, getUserProfile } from "@/app/actions/user";
+import { getUserAccount, getUserTransactions, getUserProfile, getMonthlySpending } from "@/app/actions/user";
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -10,31 +10,49 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatCompactCurrency } from "@/lib/utils";
+import SpendingChart from "./SpendingChart";
 
 export default async function DashboardPage() {
   const profile = await getUserProfile();
   const account = await getUserAccount();
   const { data: recentTransactions } = await getUserTransactions(5, 0);
+  const spendingData = await getMonthlySpending();
 
   // Basic stats logic
   // Basic stats logic
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Good Morning, {profile?.full_name.split(' ')[0]}</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Here is your financial summary.</p>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Good morning, {profile.full_name.split(' ')[0]}</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Here is a summary of your accounts.</p>
         </div>
         <div className="flex gap-3">
           <Link href="/dashboard/transfer">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-              <Send size={16} className="mr-2" />
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 shadow-md shadow-blue-600/20">
               Transfer Money
             </Button>
           </Link>
         </div>
       </div>
+
+      {profile.status === 'PENDING' && (
+        <div className="mb-8 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-6">
+          <div className="flex gap-4">
+            <div className="mt-1 w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-800/50 flex items-center justify-center shrink-0">
+              <span className="text-xl">⚠️</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-yellow-800 dark:text-yellow-400 text-lg">KYC Verification Required</h3>
+              <p className="text-sm text-yellow-700 dark:text-yellow-500 mt-1">Your account is currently limited. Please complete your identity verification (KYC) to unlock full banking features, including loans and international transfers.</p>
+              <Link href="/dashboard/profile">
+                <Button size="sm" className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white shadow-sm font-medium">Complete KYC Verification</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Main Balance Card */}
@@ -99,14 +117,21 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <div>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Recent Transactions</h2>
-          <Link href="/dashboard/transactions" className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">
-            View All
-          </Link>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Spending Analytics */}
+        <div className="lg:col-span-1 bg-white dark:bg-zinc-900 p-6 rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">Monthly Spending</h2>
+          <SpendingChart data={spendingData} />
         </div>
+
+        {/* Recent Transactions */}
+        <div className="lg:col-span-2">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Recent Transactions</h2>
+            <Link href="/dashboard/transactions" className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              View All
+            </Link>
+          </div>
         
         <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           {recentTransactions.length === 0 ? (
