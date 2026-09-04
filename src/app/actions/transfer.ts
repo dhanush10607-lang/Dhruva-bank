@@ -1,12 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserAccount, getUserProfile } from "./user";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 
 export async function processTransfer(prevState: any, formData: FormData) {
   const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
   const profile = await getUserProfile();
   const account = await getUserAccount();
   
@@ -64,7 +66,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
 
   // 1. Deduct from sender
   const newSenderBalance = Number(account.balance) - amount;
-  const { error: err1 } = await supabase
+  const { error: err1 } = await supabaseAdmin
     .from("accounts")
     .update({ balance: newSenderBalance })
     .eq("id", account.id);
@@ -72,14 +74,14 @@ export async function processTransfer(prevState: any, formData: FormData) {
 
   // 2. Add to receiver
   const newReceiverBalance = Number(receiverAccount.balance) + amount;
-  const { error: err2 } = await supabase
+  const { error: err2 } = await supabaseAdmin
     .from("accounts")
     .update({ balance: newReceiverBalance })
     .eq("id", receiverAccount.id);
   if (err2) return { error: `Receiver balance update failed: ${err2.message}` };
 
   // 3. Create Sender Ledger Entry (DEBIT)
-  const { error: err3 } = await supabase.from("transactions").insert({
+  const { error: err3 } = await supabaseAdmin.from("transactions").insert({
     account_id: account.id,
     reference_number: `${referenceNumber}-D`,
     type: "DEBIT",
@@ -92,7 +94,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
   if (err3) return { error: `Sender ledger entry failed: ${err3.message}` };
 
   // 4. Create Receiver Ledger Entry (CREDIT)
-  const { error: err4 } = await supabase.from("transactions").insert({
+  const { error: err4 } = await supabaseAdmin.from("transactions").insert({
     account_id: receiverAccount.id,
     reference_number: `${referenceNumber}-C`,
     type: "CREDIT",
@@ -105,7 +107,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
   if (err4) return { error: `Receiver ledger entry failed: ${err4.message}` };
 
   // 5. Notifications
-  await supabase.from("notifications").insert([
+  await supabaseAdmin.from("notifications").insert([
     {
       user_id: profile.id,
       title: "Transfer Successful",
