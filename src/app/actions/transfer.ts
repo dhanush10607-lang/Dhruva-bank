@@ -79,7 +79,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
   // 3. Create Sender Ledger Entry (DEBIT)
   await supabase.from("transactions").insert({
     account_id: account.id,
-    reference_number: referenceNumber,
+    reference_number: `${referenceNumber}-D`,
     type: "DEBIT",
     amount: amount,
     balance_after: newSenderBalance,
@@ -91,7 +91,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
   // 4. Create Receiver Ledger Entry (CREDIT)
   await supabase.from("transactions").insert({
     account_id: receiverAccount.id,
-    reference_number: referenceNumber,
+    reference_number: `${referenceNumber}-C`,
     type: "CREDIT",
     amount: amount,
     balance_after: newReceiverBalance,
