@@ -93,10 +93,10 @@ export default function DashboardSidebar({ profile, logoutAction }: DashboardSid
             
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold shrink-0">
-                {profile.full_name.charAt(0)}
+                {(profile.full_name || 'U').charAt(0)}
               </div>
               <div className="overflow-hidden">
-                <p className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{profile.full_name}</p>
+                <p className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{profile.full_name || 'User'}</p>
                 <p className="text-xs text-zinc-500">Cust ID: {profile.customer_id}</p>
               </div>
             </div>
