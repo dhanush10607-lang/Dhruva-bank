@@ -100,7 +100,7 @@ export async function processTransfer(prevState: any, formData: FormData) {
     type: "CREDIT",
     amount: amount,
     balance_after: newReceiverBalance,
-    description: `Transfer received from ${account.account_number}`,
+    description: description || `Transfer received from ${account.account_number}`,
     sender_details: account.account_number,
     receiver_details: receiverAccountNumber,
   });
