@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Send, AlertCircle, CheckCircle2, Users } from "lucide-react";
 import Link from "next/link";
 
-export default function TransferPage({ searchParams }: { searchParams: Promise<{ acc?: string }> }) {
+export default function TransferPage({ searchParams }: { searchParams: Promise<{ acc?: string, to?: string, amount?: string, desc?: string }> }) {
   const params = use(searchParams);
   const [state, formAction, isPending] = useActionState(processTransfer, null);
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
@@ -73,7 +73,7 @@ export default function TransferPage({ searchParams }: { searchParams: Promise<{
                     type="text"
                     list="beneficiaries-list"
                     required
-                    defaultValue={params?.acc || ""}
+                    defaultValue={params?.to || params?.acc || ""}
                     className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                     placeholder="Search Payee or type DHRU..."
                     autoComplete="off"
@@ -104,6 +104,7 @@ export default function TransferPage({ searchParams }: { searchParams: Promise<{
                       step="0.01"
                       min="1"
                       required
+                      defaultValue={params?.amount || ""}
                       className="w-full pl-8 pr-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
                       placeholder="0.00"
                     />
@@ -119,6 +120,7 @@ export default function TransferPage({ searchParams }: { searchParams: Promise<{
                     name="description"
                     type="text"
                     maxLength={50}
+                    defaultValue={params?.desc || ""}
                     className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     placeholder="e.g. Rent Payment"
                   />

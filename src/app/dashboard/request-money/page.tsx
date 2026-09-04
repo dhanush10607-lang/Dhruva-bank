@@ -3,16 +3,27 @@
 import { useState } from "react";
 import { QrCode, Copy, Check, Share2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUserAccount } from "@/app/actions/user";
+import { useEffect } from "react";
 
 export default function RequestMoneyPage() {
   const [amount, setAmount] = useState<string>("500");
   const [description, setDescription] = useState<string>("Dinner split");
   const [copied, setCopied] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [accountNumber, setAccountNumber] = useState<string>("");
+
+  useEffect(() => {
+    async function fetchAccount() {
+      const acc = await getUserAccount();
+      if (acc) setAccountNumber(acc.account_number);
+    }
+    fetchAccount();
+  }, []);
 
   // Using the actual window origin or fallback to production URL
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dhruvabank.vercel.app';
-  const paymentLink = `${baseUrl}/dashboard/transfer?amount=${amount}&desc=${encodeURIComponent(description)}&to=self`;
+  const paymentLink = `${baseUrl}/dashboard/transfer?amount=${amount}&desc=${encodeURIComponent(description)}&to=${accountNumber}`;
   // Using a free public API for QR code generation to avoid npm dependencies
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentLink)}&color=09090b`;
 
@@ -81,7 +92,7 @@ export default function RequestMoneyPage() {
 
             <Button 
               onClick={() => setGenerated(true)}
-              disabled={!amount || Number(amount) <= 0}
+              disabled={!amount || Number(amount) <= 0 || !accountNumber}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 font-semibold shadow-md"
             >
               <QrCode className="mr-2" /> Generate Request Link
