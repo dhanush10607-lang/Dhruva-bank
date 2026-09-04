@@ -14,10 +14,10 @@ import { formatCompactCurrency } from "@/lib/utils";
 export default async function DashboardPage() {
   const profile = await getUserProfile();
   const account = await getUserAccount();
-  const transactions = await getUserTransactions();
+  const { data: recentTransactions } = await getUserTransactions(5, 0);
 
   // Basic stats logic
-  const recentTransactions = transactions.slice(0, 5);
+  // Basic stats logic
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">Total Credits</p>
                 <p className="text-lg font-bold text-zinc-900 dark:text-white">
                   {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-                    transactions.filter(t => t.type === 'CREDIT').reduce((acc, curr) => acc + Number(curr.amount), 0)
+                    recentTransactions.filter((t: any) => t.type === 'CREDIT').reduce((acc: any, curr: any) => acc + Number(curr.amount), 0)
                   )}
                 </p>
               </div>
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">Total Debits</p>
                 <p className="text-lg font-bold text-zinc-900 dark:text-white">
                   {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-                    transactions.filter(t => t.type === 'DEBIT').reduce((acc, curr) => acc + Number(curr.amount), 0)
+                    recentTransactions.filter((t: any) => t.type === 'DEBIT').reduce((acc: any, curr: any) => acc + Number(curr.amount), 0)
                   )}
                 </p>
               </div>

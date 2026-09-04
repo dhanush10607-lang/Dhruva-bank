@@ -4,10 +4,15 @@ import PrintButton from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
-export default async function StatementPage() {
+export default async function StatementPage(props: { searchParams: Promise<{ page?: string }> }) {
+  const searchParams = await props.searchParams;
+  const page = searchParams?.page ? parseInt(searchParams.page) : 1;
+  const limit = 50;
+  const offset = (page - 1) * limit;
+
   const profile = await getUserProfile();
   const account = await getUserAccount();
-  const transactions = await getUserTransactions();
+  const { data: transactions, total } = await getUserTransactions(limit, offset);
 
   if (!profile || !account) {
     return <div>Error loading account details.</div>;
@@ -118,6 +123,29 @@ export default async function StatementPage() {
             )}
           </tbody>
         </table>
+        
+        {/* Statement Pagination */}
+        {total > limit && (
+          <div className="mt-6 flex justify-center print:hidden">
+            <div className="flex gap-2">
+              <a 
+                href={`/dashboard/statement?page=${page - 1}`}
+                className={`px-4 py-2 text-sm border border-zinc-300 rounded-md ${page <= 1 ? 'opacity-50 pointer-events-none' : 'hover:bg-zinc-50'}`}
+              >
+                Previous Page
+              </a>
+              <span className="px-4 py-2 text-sm text-zinc-500">
+                Page {page} of {Math.ceil(total / limit)}
+              </span>
+              <a 
+                href={`/dashboard/statement?page=${page + 1}`}
+                className={`px-4 py-2 text-sm border border-zinc-300 rounded-md ${offset + limit >= total ? 'opacity-50 pointer-events-none' : 'hover:bg-zinc-50'}`}
+              >
+                Next Page
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-12 pt-4 border-t border-zinc-300 text-xs text-zinc-500 text-center flex flex-col gap-1">

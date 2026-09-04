@@ -2,8 +2,13 @@ import { getUserTransactions, getUserAccount } from "@/app/actions/user";
 import { ArrowUpRight, ArrowDownRight, History, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default async function TransactionsPage() {
-  const transactions = await getUserTransactions();
+export default async function TransactionsPage(props: { searchParams: Promise<{ page?: string }> }) {
+  const searchParams = await props.searchParams;
+  const page = searchParams?.page ? parseInt(searchParams.page) : 1;
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  const { data: transactions, total } = await getUserTransactions(limit, offset);
   const account = await getUserAccount();
 
   return (
@@ -100,6 +105,39 @@ export default async function TransactionsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {total > limit && (
+          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900">
+            <p className="text-sm text-zinc-500">
+              Showing {offset + 1} to {Math.min(offset + limit, total)} of {total} transactions
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                disabled={page <= 1}
+                asChild={page > 1}
+              >
+                {page > 1 ? (
+                  <a href={`/dashboard/transactions?page=${page - 1}`}>Previous</a>
+                ) : (
+                  <span>Previous</span>
+                )}
+              </Button>
+              <Button 
+                variant="outline"
+                disabled={offset + limit >= total}
+                asChild={offset + limit < total}
+              >
+                {offset + limit < total ? (
+                  <a href={`/dashboard/transactions?page=${page + 1}`}>Next</a>
+                ) : (
+                  <span>Next</span>
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>

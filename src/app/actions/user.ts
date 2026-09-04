@@ -35,21 +35,21 @@ export const getUserAccount = cache(async () => {
   return account;
 });
 
-export async function getUserTransactions() {
+export const getUserTransactions = cache(async (limit: number = 50, offset: number = 0) => {
   const supabase = await createClient();
   const account = await getUserAccount();
   
-  if (!account) return [];
+  if (!account) return { data: [], total: 0 };
   
-  const { data: transactions } = await supabase
+  const { data: transactions, count } = await supabase
     .from("transactions")
-    .select("*")
+    .select("*", { count: 'exact' })
     .eq("account_id", account.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .range(offset, offset + limit - 1);
     
-  return transactions || [];
-}
+  return { data: transactions || [], total: count || 0 };
+});
 
 export async function getUserCard() {
   const supabase = await createClient();
@@ -100,7 +100,7 @@ export async function requestCard(prevState: any, formData: FormData) {
   return { success: true };
 }
 
-export async function getBeneficiaries() {
+export const getBeneficiaries = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -112,7 +112,7 @@ export async function getBeneficiaries() {
     .order("created_at", { ascending: false });
 
   return data || [];
-}
+});
 
 export async function addBeneficiary(prevState: any, formData: FormData) {
   const supabase = await createClient();
@@ -334,7 +334,7 @@ export async function updateProfile(prevState: any, formData: FormData) {
 // LOANS
 // ==========================================
 
-export async function getLoans() {
+export const getLoans = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -346,7 +346,7 @@ export async function getLoans() {
     .order("created_at", { ascending: false });
 
   return data || [];
-}
+});
 
 export async function applyForLoan(prevState: any, formData: FormData) {
   const supabase = await createClient();
@@ -486,7 +486,7 @@ export async function payLoanEMI(prevState: any, formData: FormData) {
 // SUPPORT TICKETS
 // ==========================================
 
-export async function getTickets() {
+export const getTickets = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -498,7 +498,7 @@ export async function getTickets() {
     .order("created_at", { ascending: false });
 
   return data || [];
-}
+});
 
 export async function createTicket(prevState: any, formData: FormData) {
   const supabase = await createClient();
@@ -532,7 +532,7 @@ export async function createTicket(prevState: any, formData: FormData) {
 // FIXED DEPOSITS
 // ==========================================
 
-export async function getFixedDeposits() {
+export const getFixedDeposits = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -544,7 +544,7 @@ export async function getFixedDeposits() {
     .order("created_at", { ascending: false });
 
   return data || [];
-}
+});
 
 export async function openFixedDeposit(prevState: any, formData: FormData) {
   const supabase = await createClient();
