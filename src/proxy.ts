@@ -21,22 +21,26 @@ const ratelimit = redis
   : null;
 
 export async function proxy(request: NextRequest) {
-  // Apply rate limiting to API routes or specific high-traffic paths
   if (request.nextUrl.pathname.startsWith('/api/') || request.nextUrl.pathname.startsWith('/dashboard')) {
     if (ratelimit) {
-      // Use IP as the identifier
-      const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
-      const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+      try {
+        // Use IP as the identifier
+        const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
+        const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
-      if (!success) {
-        return new NextResponse('Too Many Requests. Rate limit exceeded.', {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': limit.toString(),
-            'X-RateLimit-Remaining': remaining.toString(),
-            'X-RateLimit-Reset': reset.toString(),
-          },
-        });
+        if (!success) {
+          return new NextResponse('Too Many Requests. Rate limit exceeded.', {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': limit.toString(),
+              'X-RateLimit-Remaining': remaining.toString(),
+              'X-RateLimit-Reset': reset.toString(),
+            },
+          });
+        }
+      } catch (error) {
+        // Fail open if Redis is down or unreachable so we don't crash the app
+        console.error('Rate limiting error:', error);
       }
     }
   }
