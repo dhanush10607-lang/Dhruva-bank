@@ -729,7 +729,7 @@ export async function createScheduledTransfer(formData: FormData) {
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const supabaseAdmin = createAdminClient();
   const account = await getUserAccount();
-  if (!account) return { error: "Account not found" };
+  if (!account) throw new Error("Account not found");
 
   const beneficiary_account = formData.get("beneficiary_id") as string;
   const amount = parseFloat(formData.get("amount") as string);
@@ -751,7 +751,7 @@ export async function createScheduledTransfer(formData: FormData) {
     .single();
 
   if (receiverError || !receiverAccount) {
-    return { error: "Beneficiary account not found in the bank database." };
+    throw new Error("Beneficiary account not found in the bank database.");
   }
 
   const { error } = await supabaseAdmin.from("scheduled_transfers").insert({
@@ -766,11 +766,10 @@ export async function createScheduledTransfer(formData: FormData) {
   });
 
   if (error) {
-    return { error: `Failed to create scheduled transfer: ${error.message}` };
+    throw new Error(`Failed to create scheduled transfer: ${error.message}`);
   }
 
   revalidatePath("/dashboard/scheduled");
-  return { success: true };
 }
 
 export async function cancelScheduledTransfer(formData: FormData) {
