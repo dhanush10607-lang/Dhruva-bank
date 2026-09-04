@@ -726,8 +726,10 @@ export const getScheduledTransfers = cache(async () => {
 
 export async function createScheduledTransfer(formData: FormData) {
   const supabase = await createClient();
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const supabaseAdmin = createAdminClient();
   const account = await getUserAccount();
-  if (!account) throw new Error("Account not found");
+  if (!account) return { error: "Account not found" };
 
   const beneficiary_account = formData.get("beneficiary_id") as string;
   const amount = parseFloat(formData.get("amount") as string);
@@ -741,9 +743,21 @@ export async function createScheduledTransfer(formData: FormData) {
   if (frequency === 'MONTHLY') nextRun.setMonth(nextRun.getMonth() + 1);
   if (frequency === 'YEARLY') nextRun.setFullYear(nextRun.getFullYear() + 1);
 
-  await supabase.from("scheduled_transfers").insert({
+  // Look up receiver account ID
+  const { data: receiverAccount, error: receiverError } = await supabaseAdmin
+    .from("accounts")
+    .select("id")
+    .eq("account_number", beneficiary_account)
+    .single();
+
+  if (receiverError || !receiverAccount) {
+    return { error: "Beneficiary account not found in the bank database." };
+  }
+
+  const { error } = await supabaseAdmin.from("scheduled_transfers").insert({
     user_id: account.user_id,
     from_account_id: account.id,
+    to_account_id: receiverAccount.id,
     amount,
     frequency,
     description,
@@ -751,7 +765,12 @@ export async function createScheduledTransfer(formData: FormData) {
     status: 'ACTIVE'
   });
 
+  if (error) {
+    return { error: `Failed to create scheduled transfer: ${error.message}` };
+  }
+
   revalidatePath("/dashboard/scheduled");
+  return { success: true };
 }
 
 export async function cancelScheduledTransfer(formData: FormData) {
