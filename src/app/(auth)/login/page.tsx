@@ -12,6 +12,7 @@ function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginUser, null);
   const searchParams = useSearchParams();
   const message = searchParams.get("message");
+  const returnTo = searchParams.get("returnTo");
 
   return (
     <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
@@ -40,6 +41,7 @@ function LoginForm() {
       )}
 
       <form action={formAction} className="space-y-4" suppressHydrationWarning>
+        {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
         <div>
           <label
             htmlFor="email"

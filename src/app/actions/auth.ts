@@ -46,6 +46,7 @@ export async function loginUser(prevState: any, formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const returnTo = formData.get("returnTo") as string;
 
   if (!email || !password) {
     return { error: "Email and password are required" };
@@ -119,9 +120,11 @@ export async function loginUser(prevState: any, formData: FormData) {
   revalidatePath("/", "layout");
   
   if (userProfile.role === "ADMIN" || userProfile.role === "SUPER_ADMIN") {
-    redirect("/admin");
+    redirect(returnTo && returnTo.startsWith('/admin') ? returnTo : "/admin");
   } else {
-    redirect("/dashboard");
+    // Basic validation to ensure returnTo is a local path
+    const target = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : "/dashboard";
+    redirect(target);
   }
 }
 
