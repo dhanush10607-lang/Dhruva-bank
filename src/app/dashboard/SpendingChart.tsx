@@ -18,8 +18,8 @@ export default function SpendingChart({ data }: { data: SpendingData[] }) {
     );
   }
 
-  const formatter = (value: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
+  const formatter = (value: any) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value));
   };
 
   return (
