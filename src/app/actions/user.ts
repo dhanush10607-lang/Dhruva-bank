@@ -706,6 +706,66 @@ export async function toggleCardFreeze(cardId: string, currentStatus: string) {
   return { success: true, newStatus };
 }
 
+// ==========================================
+// SCHEDULED TRANSFERS
+// ==========================================
+
+export const getScheduledTransfers = cache(async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("scheduled_transfers")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return data || [];
+});
+
+export async function createScheduledTransfer(formData: FormData) {
+  const supabase = await createClient();
+  const account = await getUserAccount();
+  if (!account) throw new Error("Account not found");
+
+  const beneficiary_account = formData.get("beneficiary_id") as string;
+  const amount = parseFloat(formData.get("amount") as string);
+  const frequency = formData.get("frequency") as string;
+  const description = formData.get("description") as string;
+
+  // Calculate next run date based on frequency
+  const nextRun = new Date();
+  if (frequency === 'DAILY') nextRun.setDate(nextRun.getDate() + 1);
+  if (frequency === 'WEEKLY') nextRun.setDate(nextRun.getDate() + 7);
+  if (frequency === 'MONTHLY') nextRun.setMonth(nextRun.getMonth() + 1);
+  if (frequency === 'YEARLY') nextRun.setFullYear(nextRun.getFullYear() + 1);
+
+  await supabase.from("scheduled_transfers").insert({
+    user_id: account.user_id,
+    from_account_id: account.id,
+    amount,
+    frequency,
+    description,
+    next_run_date: nextRun.toISOString(),
+    status: 'ACTIVE'
+  });
+
+  revalidatePath("/dashboard/scheduled");
+}
+
+export async function cancelScheduledTransfer(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+
+  await supabase
+    .from("scheduled_transfers")
+    .update({ status: 'CANCELLED' })
+    .eq("id", id);
+
+  revalidatePath("/dashboard/scheduled");
+}
+
 export async function toggleCardInternational(cardId: string, currentEnabled: boolean) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

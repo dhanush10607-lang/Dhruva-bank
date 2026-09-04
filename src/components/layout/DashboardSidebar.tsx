@@ -18,7 +18,9 @@ import {
   FileText,
   PiggyBank,
   Menu,
-  X
+  X,
+  QrCode,
+  CalendarClock
 } from "lucide-react";
 
 interface ProfileProps {
@@ -115,6 +117,14 @@ export default function DashboardSidebar({ profile, logoutAction }: DashboardSid
           <Link onClick={closeSidebar} href="/dashboard/transfer" className={getLinkClasses("/dashboard/transfer")}>
             <ArrowRightLeft size={18} className="shrink-0" />
             Transfer Money
+          </Link>
+          <Link onClick={closeSidebar} href="/dashboard/request-money" className={getLinkClasses("/dashboard/request-money")}>
+            <QrCode size={18} className="shrink-0" />
+            Request Money
+          </Link>
+          <Link onClick={closeSidebar} href="/dashboard/scheduled" className={getLinkClasses("/dashboard/scheduled")}>
+            <CalendarClock size={18} className="shrink-0" />
+            Scheduled Transfers
           </Link>
           <Link onClick={closeSidebar} href="/dashboard/transactions" className={getLinkClasses("/dashboard/transactions")}>
             <History size={18} className="shrink-0" />

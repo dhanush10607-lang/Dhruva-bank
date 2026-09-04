@@ -38,10 +38,7 @@ export default async function DashboardLayout({
     );
   }
 
-  if (profile.status !== "APPROVED") {
-    redirect("/login?message=Your account application is awaiting admin verification.");
-  }
-
+  // Removed the APPROVED check to allow PENDING users to upload KYC
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col md:flex-row relative">
       <DashboardSidebar profile={{ full_name: profile.full_name, customer_id: profile.customer_id }} logoutAction={logoutUser} />

@@ -343,6 +343,22 @@ FOR SELECT USING (
 );
 
 -- ==========================================
+-- SCHEDULED TRANSFERS
+-- ==========================================
+CREATE TABLE scheduled_transfers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    from_account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    to_account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+    description TEXT,
+    frequency VARCHAR(20) DEFAULT 'MONTHLY' CHECK (frequency IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY')),
+    next_run_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'PAUSED', 'CANCELLED', 'COMPLETED')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================
 -- INDEXES FOR SCALABILITY & PERFORMANCE
 -- ==========================================
 
