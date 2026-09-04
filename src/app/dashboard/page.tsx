@@ -5,7 +5,8 @@ import {
   Wallet,
   CreditCard,
   Send,
-  Plus
+  Plus,
+  Landmark
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
-// Ensure the icon is imported for the absolute block
-import { Landmark } from "lucide-react";
