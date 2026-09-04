@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     account_number VARCHAR(20) UNIQUE NOT NULL,
     account_type VARCHAR(20) DEFAULT 'SAVINGS' CHECK (account_type IN ('SAVINGS', 'CURRENT', 'SALARY')),
     balance DECIMAL(15,2) DEFAULT 0.00,
+    currency VARCHAR(3) DEFAULT 'INR',
+    usd_balance DECIMAL(15,2) DEFAULT 0.00,
+    eur_balance DECIMAL(15,2) DEFAULT 0.00,
     status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'FROZEN', 'CLOSED')),
     branch_id UUID, -- Will link to branches table later
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -356,6 +359,29 @@ CREATE TABLE scheduled_transfers (
     next_run_date TIMESTAMP WITH TIME ZONE NOT NULL,
     status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'PAUSED', 'CANCELLED', 'COMPLETED')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================
+-- WEALTH MANAGEMENT (INVESTMENTS)
+-- ==========================================
+CREATE TABLE market_assets (
+    symbol VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) DEFAULT 'STOCK' CHECK (type IN ('STOCK', 'CRYPTO', 'MUTUAL_FUND')),
+    current_price DECIMAL(15,2) NOT NULL,
+    daily_change_percent DECIMAL(5,2) DEFAULT 0.00,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_investments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    asset_symbol VARCHAR(10) REFERENCES market_assets(symbol) ON DELETE CASCADE,
+    quantity DECIMAL(15,6) NOT NULL CHECK (quantity > 0),
+    average_buy_price DECIMAL(15,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, asset_symbol)
 );
 
 -- ==========================================

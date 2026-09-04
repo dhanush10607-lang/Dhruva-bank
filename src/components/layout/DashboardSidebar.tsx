@@ -20,7 +20,9 @@ import {
   Menu,
   X,
   QrCode,
-  CalendarClock
+  CalendarClock,
+  TrendingUp,
+  Globe
 } from "lucide-react";
 
 interface ProfileProps {
@@ -129,6 +131,14 @@ export default function DashboardSidebar({ profile, logoutAction }: DashboardSid
           <Link onClick={closeSidebar} href="/dashboard/transactions" className={getLinkClasses("/dashboard/transactions")}>
             <History size={18} className="shrink-0" />
             Transactions
+          </Link>
+          <Link onClick={closeSidebar} href="/dashboard/investments" className={getLinkClasses("/dashboard/investments")}>
+            <TrendingUp size={18} className="shrink-0" />
+            Investments
+          </Link>
+          <Link onClick={closeSidebar} href="/dashboard/currency" className={getLinkClasses("/dashboard/currency")}>
+            <Globe size={18} className="shrink-0" />
+            Global Currency
           </Link>
           <Link onClick={closeSidebar} href="/dashboard/fd" className={getLinkClasses("/dashboard/fd")}>
             <PiggyBank size={18} className="shrink-0" />
