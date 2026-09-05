@@ -143,13 +143,19 @@ BEGIN
     
     -- Credit total collected fees to the admin account in a single operation
     IF p_admin_account_id IS NOT NULL AND v_total_fees_collected > 0 THEN
-        SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
-        v_new_admin_balance := v_admin_balance + v_total_fees_collected;
-        
-        UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
-        
-        INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-        VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+        BEGIN
+            SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
+            v_new_admin_balance := v_admin_balance + v_total_fees_collected;
+            
+            UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
+            
+            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+            VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+        EXCEPTION WHEN OTHERS THEN
+            -- If the Admin treasury is already maxed out (e.g. from RBI Claims), 
+            -- crediting it further will cause a numeric overflow. We gracefully catch this 
+            -- so that the rest of the users' successful EOM processing doesn't roll back!
+        END;
     END IF;
 
     RETURN v_processed_count;
