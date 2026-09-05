@@ -102,7 +102,11 @@ export default function AdminSidebar({ logoutAction }: AdminSidebarProps) {
           </Link>
           <Link onClick={closeSidebar} href="/admin/transactions" className={getLinkClasses("/admin/transactions")}>
             <ArrowRightLeft size={18} className="shrink-0" />
-            Transactions
+            Treasury Management
+          </Link>
+          <Link onClick={closeSidebar} href="/admin/statement" className={getLinkClasses("/admin/statement")}>
+            <LayoutDashboard size={18} className="shrink-0" />
+            Treasury Statement
           </Link>
           <Link onClick={closeSidebar} href="/admin/cards" className={getLinkClasses("/admin/cards")}>
             <CreditCard size={18} className="shrink-0" />

@@ -956,3 +956,30 @@ export async function updateCardStatus(cardId: string, newStatus: string) {
   revalidatePath("/admin/cards");
   return { success: true };
 }
+
+export async function getAdminAllTransactions() {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+  
+  // Find the treasury account ID
+  const { data: adminAcc } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("account_number", "RBI-TREASURY")
+    .single();
+
+  if (!adminAcc) return [];
+
+  // Get all transactions for this account
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*, accounts(account_number, users(full_name))")
+    .eq("account_id", adminAcc.id)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  
+  return data || [];
+}
