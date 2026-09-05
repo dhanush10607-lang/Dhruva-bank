@@ -53,8 +53,14 @@ DECLARE
     v_processed_count INTEGER := 0;
     v_total_fees_collected NUMERIC := 0;
     v_total_emis_collected NUMERIC := 0;
+    v_total_card_fees_collected NUMERIC := 0;
+    v_total_savings_interest_paid NUMERIC := 0;
+    v_total_fd_interest_paid NUMERIC := 0;
     v_admin_balance NUMERIC;
     v_new_admin_balance NUMERIC;
+    v_card RECORD;
+    v_fd RECORD;
+    v_interest_yield NUMERIC;
 BEGIN
     FOR i IN 1 .. array_length(p_account_ids, 1) LOOP
         v_account_id := p_account_ids[i];
@@ -108,9 +114,21 @@ BEGIN
                         -- Check if EMI for this specific loan was already paid this month
                         IF NOT EXISTS (SELECT 1 FROM public.eom_loan_tracking WHERE loan_id = v_loan.id AND period_month = p_month AND period_year = p_year) THEN
                             
+                            IF v_account_type = 'SAVINGS' THEN
+                                v_interest_amount := ROUND((v_balance * (p_interest_rate_pa / 100.0) / 12.0)::numeric, 2);
+                                IF v_interest_amount > 0 THEN
+                                    v_new_balance := ROUND((v_new_balance + v_interest_amount)::numeric, 2);
+                                    
+                                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                                    VALUES (v_account_id, 'CREDIT', v_interest_amount, v_new_balance, 'Monthly Interest', 'EOM-INT-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 8));
+                                    
+                                    -- Aggregate paid interest to deduct from Admin Treasury later
+                                    v_total_savings_interest_paid := v_total_savings_interest_paid + v_interest_amount;
+                                END IF;
+                            END IF;       -- Aggregate collected EMIs for the admin
+                            
                             -- Deduct EMI from account balance
                             v_new_balance := ROUND((v_new_balance - v_loan.emi_amount)::numeric, 2);
-                            UPDATE public.accounts SET balance = v_new_balance WHERE id = v_account_id;
                             
                             -- Record Transaction
                             INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
@@ -123,7 +141,7 @@ BEGIN
                             IF (v_loan.total_payable - v_loan.emi_amount) <= 0 THEN
                                 UPDATE public.loans SET total_payable = 0, status = 'CLOSED' WHERE id = v_loan.id;
                             ELSE
-                                UPDATE public.loans SET total_payable = v_loan.total_payable - v_loan.emi_amount WHERE id = v_loan.id;
+                                UPDATE public.loans SET total_payable = total_payable - v_loan.emi_amount WHERE id = v_loan.id;
                             END IF;
                             
                             -- Record loan idempotency
@@ -131,6 +149,42 @@ BEGIN
                             VALUES (v_loan.id, p_month, p_year, 'PROCESSED');
                         END IF;
                     END LOOP;
+
+                    -- ----------------------------------------------------
+                    -- CARD FEES PROCESSING
+                    -- ----------------------------------------------------
+                    FOR v_card IN SELECT id, type FROM public.cards WHERE account_id = v_account_id AND status = 'ACTIVE' LOOP
+                        IF v_card.type = 'DEBIT' THEN
+                            v_new_balance := ROUND((v_new_balance - 25.00)::numeric, 2);
+                            v_total_card_fees_collected := v_total_card_fees_collected + 25.00;
+                            
+                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                            VALUES (v_account_id, 'DEBIT', 25.00, v_new_balance, 'Debit Card Monthly Fee', 'EOM-CRD-' || p_year || '-' || p_month || '-' || substr(v_card.id::text, 1, 8));
+                        ELSIF v_card.type = 'CREDIT' THEN
+                            v_new_balance := ROUND((v_new_balance - 100.00)::numeric, 2);
+                            v_total_card_fees_collected := v_total_card_fees_collected + 100.00;
+                            
+                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                            VALUES (v_account_id, 'DEBIT', 100.00, v_new_balance, 'Credit Card Monthly Fee', 'EOM-CRD-' || p_year || '-' || p_month || '-' || substr(v_card.id::text, 1, 8));
+                        END IF;
+                    END LOOP;
+
+                    -- ----------------------------------------------------
+                    -- FD MONTHLY INTEREST PROCESSING
+                    -- ----------------------------------------------------
+                    FOR v_fd IN SELECT id, amount, interest_rate FROM public.fixed_deposits WHERE account_id = v_account_id AND status = 'ACTIVE' LOOP
+                        v_interest_yield := ROUND((v_fd.amount * (v_fd.interest_rate / 100.0) / 12.0)::numeric, 2);
+                        IF v_interest_yield > 0 THEN
+                            v_new_balance := ROUND((v_new_balance + v_interest_yield)::numeric, 2);
+                            v_total_fd_interest_paid := v_total_fd_interest_paid + v_interest_yield;
+                            
+                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                            VALUES (v_account_id, 'CREDIT', v_interest_yield, v_new_balance, 'FD Monthly Interest Payout', 'EOM-FDI-' || p_year || '-' || p_month || '-' || substr(v_fd.id::text, 1, 8));
+                        END IF;
+                    END LOOP;
+                    
+                    -- Finalize Account Balance Update
+                    UPDATE public.accounts SET balance = v_new_balance WHERE id = v_account_id;
 
                     -- Mark as processed for idempotency
                     INSERT INTO public.eom_tracking (account_id, period_month, period_year, status)
@@ -145,35 +199,51 @@ BEGIN
         END IF;
     END LOOP;
     
-    -- Credit total collected fees and EMIs to the admin account
+    -- Credit/Debit Admin Treasury for all transactions in this chunk
     IF p_admin_account_id IS NOT NULL THEN
         BEGIN
-            -- Only update admin if there is revenue to collect
-            IF v_total_fees_collected > 0 OR v_total_emis_collected > 0 THEN
+            -- Only update admin if there is revenue or expenses
+            IF v_total_fees_collected > 0 OR v_total_emis_collected > 0 OR v_total_card_fees_collected > 0 OR v_total_savings_interest_paid > 0 OR v_total_fd_interest_paid > 0 THEN
                 SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
                 v_new_admin_balance := v_admin_balance;
                 
-                -- Process Fees
+                -- Process Income (CREDITS to Admin)
                 IF v_total_fees_collected > 0 THEN
-                    v_new_admin_balance := v_new_admin_balance + v_total_fees_collected;
+                    v_new_admin_balance := ROUND(v_new_admin_balance + v_total_fees_collected, 2);
                     INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-                    VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+                    VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Maintenance Fee Collection', 'EOM-MFE-COL-' || p_month || p_year || substr(gen_random_uuid()::text,1,8));
                 END IF;
 
-                -- Process Loan EMIs
                 IF v_total_emis_collected > 0 THEN
-                    v_new_admin_balance := v_new_admin_balance + v_total_emis_collected;
+                    v_new_admin_balance := ROUND(v_new_admin_balance + v_total_emis_collected, 2);
                     INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-                    VALUES (p_admin_account_id, 'CREDIT', v_total_emis_collected, v_new_admin_balance, 'EOM Loan EMI Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-EMI-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+                    VALUES (p_admin_account_id, 'CREDIT', v_total_emis_collected, v_new_admin_balance, 'EOM Loan EMI Collection', 'EOM-EMI-COL-' || p_month || p_year || substr(gen_random_uuid()::text,1,8));
+                END IF;
+
+                IF v_total_card_fees_collected > 0 THEN
+                    v_new_admin_balance := ROUND(v_new_admin_balance + v_total_card_fees_collected, 2);
+                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                    VALUES (p_admin_account_id, 'CREDIT', v_total_card_fees_collected, v_new_admin_balance, 'EOM Card Fee Collection', 'EOM-CRD-COL-' || p_month || p_year || substr(gen_random_uuid()::text,1,8));
+                END IF;
+
+                -- Process Expenses (DEBITS from Admin)
+                IF v_total_savings_interest_paid > 0 THEN
+                    v_new_admin_balance := ROUND(v_new_admin_balance - v_total_savings_interest_paid, 2);
+                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                    VALUES (p_admin_account_id, 'DEBIT', v_total_savings_interest_paid, v_new_admin_balance, 'EOM Savings Interest Payout', 'EOM-SAV-PAY-' || p_month || p_year || substr(gen_random_uuid()::text,1,8));
+                END IF;
+
+                IF v_total_fd_interest_paid > 0 THEN
+                    v_new_admin_balance := ROUND(v_new_admin_balance - v_total_fd_interest_paid, 2);
+                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                    VALUES (p_admin_account_id, 'DEBIT', v_total_fd_interest_paid, v_new_admin_balance, 'EOM FD Interest Payout', 'EOM-FDI-PAY-' || p_month || p_year || substr(gen_random_uuid()::text,1,8));
                 END IF;
                 
                 -- Update final admin balance
                 UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
             END IF;
         EXCEPTION WHEN OTHERS THEN
-            -- If the Admin treasury is already maxed out (e.g. from RBI Claims), 
-            -- crediting it further will cause a numeric overflow. We gracefully catch this 
-            -- so that the rest of the users' successful EOM processing doesn't roll back!
+            -- Ignore admin treasury overflow/underflow
         END;
     END IF;
 
