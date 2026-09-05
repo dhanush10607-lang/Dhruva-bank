@@ -104,6 +104,22 @@ BEGIN
                     END IF;
                     
                     -- ----------------------------------------------------
+                    -- SAVINGS INTEREST PROCESSING
+                    -- ----------------------------------------------------
+                    IF v_account_type = 'SAVINGS' THEN
+                        v_interest_amount := ROUND((v_balance * (p_interest_rate_pa / 100.0) / 12.0)::numeric, 2);
+                        IF v_interest_amount > 0 THEN
+                            v_new_balance := ROUND((v_new_balance + v_interest_amount)::numeric, 2);
+                            
+                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                            VALUES (v_account_id, 'CREDIT', v_interest_amount, v_new_balance, 'Monthly Interest', 'EOM-INT-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 8));
+                            
+                            -- Aggregate paid interest to deduct from Admin Treasury later
+                            v_total_savings_interest_paid := v_total_savings_interest_paid + v_interest_amount;
+                        END IF;
+                    END IF;
+                    
+                    -- ----------------------------------------------------
                     -- LOAN EMI PROCESSING
                     -- ----------------------------------------------------
                     FOR v_loan IN 
@@ -113,19 +129,6 @@ BEGIN
                     LOOP
                         -- Check if EMI for this specific loan was already paid this month
                         IF NOT EXISTS (SELECT 1 FROM public.eom_loan_tracking WHERE loan_id = v_loan.id AND period_month = p_month AND period_year = p_year) THEN
-                            
-                            IF v_account_type = 'SAVINGS' THEN
-                                v_interest_amount := ROUND((v_balance * (p_interest_rate_pa / 100.0) / 12.0)::numeric, 2);
-                                IF v_interest_amount > 0 THEN
-                                    v_new_balance := ROUND((v_new_balance + v_interest_amount)::numeric, 2);
-                                    
-                                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-                                    VALUES (v_account_id, 'CREDIT', v_interest_amount, v_new_balance, 'Monthly Interest', 'EOM-INT-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 8));
-                                    
-                                    -- Aggregate paid interest to deduct from Admin Treasury later
-                                    v_total_savings_interest_paid := v_total_savings_interest_paid + v_interest_amount;
-                                END IF;
-                            END IF;       -- Aggregate collected EMIs for the admin
                             
                             -- Deduct EMI from account balance
                             v_new_balance := ROUND((v_new_balance - v_loan.emi_amount)::numeric, 2);
