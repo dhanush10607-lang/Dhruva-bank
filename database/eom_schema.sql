@@ -19,14 +19,14 @@ CREATE OR REPLACE FUNCTION process_eom_batch(
     p_account_ids UUID[], 
     p_month INTEGER, 
     p_year INTEGER,
-    p_interest_rate DECIMAL DEFAULT 0.0,
-    p_monthly_fee DECIMAL DEFAULT 0.0
+    p_interest_rate NUMERIC DEFAULT 0.0,
+    p_monthly_fee NUMERIC DEFAULT 0.0
 ) RETURNS INTEGER AS $$
 DECLARE
     v_account_id UUID;
-    v_balance DECIMAL;
-    v_new_balance DECIMAL;
-    v_interest_amount DECIMAL;
+    v_balance NUMERIC(15,2);
+    v_new_balance NUMERIC(15,2);
+    v_interest_amount NUMERIC(15,2);
     v_processed_count INTEGER := 0;
 BEGIN
     FOR i IN 1 .. array_length(p_account_ids, 1) LOOP
@@ -36,7 +36,7 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM public.eom_tracking WHERE account_id = v_account_id AND period_month = p_month AND period_year = p_year) THEN
             
             -- Lock account row for update to prevent race conditions
-            SELECT balance INTO v_balance FROM public.accounts WHERE id = v_account_id FOR UPDATE;
+            SELECT COALESCE(balance, 0.00) INTO v_balance FROM public.accounts WHERE id = v_account_id FOR UPDATE;
             
             IF FOUND THEN
                 -- Calculate EOM changes and round to 2 decimal places to prevent overflow
