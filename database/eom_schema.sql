@@ -155,3 +155,7 @@ BEGIN
     RETURN v_processed_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Automatically notify Supabase to reload its API schema cache 
+-- so the new function signature is instantly available to the Next.js API.
+NOTIFY pgrst, 'reload schema';
