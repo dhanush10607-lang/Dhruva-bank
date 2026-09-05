@@ -26,10 +26,13 @@ export async function POST(request: Request) {
     const month = now.getMonth() + 1; 
     const year = now.getFullYear();
 
-    // 2. Fetch all account IDs (only IDs to keep memory footprint very low)
+    // 2. Fetch all active account IDs, excluding admins
+    // We use !inner to filter the joined 'users' table
     const { data: accounts, error } = await supabaseAdmin
       .from('accounts')
-      .select('id');
+      .select('id, users!inner(role)')
+      .eq('status', 'ACTIVE')
+      .eq('users.role', 'USER');
 
     if (error) throw error;
     if (!accounts || accounts.length === 0) {
