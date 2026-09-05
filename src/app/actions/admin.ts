@@ -674,6 +674,12 @@ export async function submitRBIClaim(prevState: any, formData: FormData) {
 
   const newBalance = Number(treasury.balance) + amount;
 
+  // DECIMAL(15,2) max limit is 9,999,999,999,999.99
+  const MAX_DECIMAL = 9999999999999.99;
+  if (newBalance > MAX_DECIMAL) {
+    return { error: `Treasury vault capacity exceeded. Maximum allowed balance is ₹${MAX_DECIMAL.toLocaleString('en-IN')}. Your current balance is ₹${Number(treasury.balance).toLocaleString('en-IN')}. Please claim a smaller amount.` };
+  }
+
   // Credit the treasury account
   const { error: updateError } = await supabase
     .from("accounts")
