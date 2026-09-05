@@ -15,6 +15,11 @@ CREATE INDEX IF NOT EXISTS idx_eom_tracking_lookup ON public.eom_tracking(accoun
 -- RPC for Bulk EOM Processing
 -- This function processes an array of account IDs, applies interest and fees, 
 -- creates transaction logs, and records idempotency in a single database transaction.
+
+-- Drop the old function signatures just in case Postgres complains about type changes
+DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, DECIMAL, DECIMAL);
+DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, NUMERIC, NUMERIC);
+
 CREATE OR REPLACE FUNCTION process_eom_batch(
     p_account_ids UUID[], 
     p_month INTEGER, 
