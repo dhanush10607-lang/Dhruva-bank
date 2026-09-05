@@ -39,9 +39,9 @@ BEGIN
             SELECT balance INTO v_balance FROM public.accounts WHERE id = v_account_id FOR UPDATE;
             
             IF FOUND THEN
-                -- Calculate EOM changes
-                v_interest_amount := (v_balance * (p_interest_rate / 100.0));
-                v_new_balance := v_balance + v_interest_amount - p_monthly_fee;
+                -- Calculate EOM changes and round to 2 decimal places to prevent overflow
+                v_interest_amount := ROUND((v_balance * (p_interest_rate / 100.0))::numeric, 2);
+                v_new_balance := ROUND((v_balance + v_interest_amount - p_monthly_fee)::numeric, 2);
                 
                 -- Update balance
                 UPDATE public.accounts SET balance = v_new_balance WHERE id = v_account_id;
