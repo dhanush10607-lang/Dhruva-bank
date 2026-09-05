@@ -9,6 +9,11 @@ export default function CurrencyExchangePage() {
   const [fromCurrency, setFromCurrency] = useState("INR");
   const [toCurrency, setToCurrency] = useState("USD");
   const [loading, setLoading] = useState(false);
+  const [balances, setBalances] = useState<Record<string, number>>({
+    INR: 145200,
+    USD: 0,
+    EUR: 0,
+  });
 
   // Simulated exchange rates (In a real app, this would come from an API or DB)
   const rates: Record<string, number> = {
@@ -25,10 +30,21 @@ export default function CurrencyExchangePage() {
 
   const handleConvert = (e: React.FormEvent) => {
     e.preventDefault();
+    const amountNum = Number(amount);
+    if (balances[fromCurrency] < amountNum) {
+      alert("Insufficient funds in the source wallet!");
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      alert(`Simulated: Converted ${symbols[fromCurrency]}${amount} to ${symbols[toCurrency]}${convertedAmount}`);
+      setBalances(prev => ({
+        ...prev,
+        [fromCurrency]: prev[fromCurrency] - amountNum,
+        [toCurrency]: prev[toCurrency] + Number(convertedAmount)
+      }));
+      alert(`Successfully converted ${symbols[fromCurrency]}${amount} to ${symbols[toCurrency]}${convertedAmount}`);
     }, 1000);
   };
 
@@ -48,7 +64,7 @@ export default function CurrencyExchangePage() {
           <form onSubmit={handleConvert} className="space-y-6">
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">You Send</label>
-              <span className="text-xs text-zinc-500">Balance: ₹1,45,200</span>
+              <span className="text-xs text-zinc-500">Balance: {symbols[fromCurrency]}{balances[fromCurrency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             
             <div className="flex gap-4">
@@ -130,8 +146,8 @@ export default function CurrencyExchangePage() {
             <h3 className="font-bold text-slate-300 mb-6 flex items-center gap-2">
               <DollarSign size={20} /> USD Wallet
             </h3>
-            <p className="text-4xl font-bold mb-2">$0.00</p>
-            <p className="text-sm text-slate-400">≈ ₹0.00 INR</p>
+            <p className="text-4xl font-bold mb-2">${balances.USD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-sm text-slate-400">≈ ₹{(balances.USD * (rates.INR / rates.USD)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} INR</p>
             
             <div className="mt-8 flex gap-3">
               <Button variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white w-full">Deposit</Button>
@@ -143,8 +159,8 @@ export default function CurrencyExchangePage() {
             <h3 className="font-bold text-indigo-300 mb-6 flex items-center gap-2">
               <Euro size={20} /> EUR Wallet
             </h3>
-            <p className="text-4xl font-bold mb-2">€0.00</p>
-            <p className="text-sm text-indigo-400">≈ ₹0.00 INR</p>
+            <p className="text-4xl font-bold mb-2">€{balances.EUR.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-sm text-indigo-400">≈ ₹{(balances.EUR * (rates.INR / rates.EUR)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} INR</p>
             
             <div className="mt-8 flex gap-3">
               <Button variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20 text-white w-full">Deposit</Button>
