@@ -82,9 +82,9 @@ export default function CurrencyExchangePage() {
                 onChange={(e) => setFromCurrency(e.target.value)}
                 className="w-32 px-4 py-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl font-bold outline-none dark:text-white"
               >
-                <option value="INR">🇮🇳 INR</option>
-                <option value="USD">🇺🇸 USD</option>
-                <option value="EUR">🇪🇺 EUR</option>
+                <option value="INR" disabled={toCurrency === "INR"}>🇮🇳 INR</option>
+                <option value="USD" disabled={toCurrency === "USD"}>🇺🇸 USD</option>
+                <option value="EUR" disabled={toCurrency === "EUR"}>🇪🇺 EUR</option>
               </select>
             </div>
 
@@ -119,9 +119,9 @@ export default function CurrencyExchangePage() {
                 onChange={(e) => setToCurrency(e.target.value)}
                 className="w-32 px-4 py-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl font-bold outline-none dark:text-white"
               >
-                <option value="USD">🇺🇸 USD</option>
-                <option value="EUR">🇪🇺 EUR</option>
-                <option value="INR">🇮🇳 INR</option>
+                <option value="USD" disabled={fromCurrency === "USD"}>🇺🇸 USD</option>
+                <option value="EUR" disabled={fromCurrency === "EUR"}>🇪🇺 EUR</option>
+                <option value="INR" disabled={fromCurrency === "INR"}>🇮🇳 INR</option>
               </select>
             </div>
 
