@@ -52,6 +52,7 @@ DECLARE
     
     v_processed_count INTEGER := 0;
     v_total_fees_collected NUMERIC := 0;
+    v_total_emis_collected NUMERIC := 0;
     v_admin_balance NUMERIC;
     v_new_admin_balance NUMERIC;
 BEGIN
@@ -115,6 +116,9 @@ BEGIN
                             INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
                             VALUES (v_account_id, 'DEBIT', v_loan.emi_amount, v_new_balance, 'Loan EMI Deduction (' || v_loan.loan_type || ')', 'EOM-EMI-' || p_year || '-' || p_month || '-' || substr(v_loan.id::text, 1, 8));
                             
+                            -- Aggregate collected EMIs for the admin
+                            v_total_emis_collected := v_total_emis_collected + v_loan.emi_amount;
+                            
                             -- Update Loan Balance
                             IF (v_loan.total_payable - v_loan.emi_amount) <= 0 THEN
                                 UPDATE public.loans SET total_payable = 0, status = 'CLOSED' WHERE id = v_loan.id;
@@ -141,16 +145,31 @@ BEGIN
         END IF;
     END LOOP;
     
-    -- Credit total collected fees to the admin account in a single operation
-    IF p_admin_account_id IS NOT NULL AND v_total_fees_collected > 0 THEN
+    -- Credit total collected fees and EMIs to the admin account
+    IF p_admin_account_id IS NOT NULL THEN
         BEGIN
-            SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
-            v_new_admin_balance := v_admin_balance + v_total_fees_collected;
-            
-            UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
-            
-            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-            VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+            -- Only update admin if there is revenue to collect
+            IF v_total_fees_collected > 0 OR v_total_emis_collected > 0 THEN
+                SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
+                v_new_admin_balance := v_admin_balance;
+                
+                -- Process Fees
+                IF v_total_fees_collected > 0 THEN
+                    v_new_admin_balance := v_new_admin_balance + v_total_fees_collected;
+                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                    VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+                END IF;
+
+                -- Process Loan EMIs
+                IF v_total_emis_collected > 0 THEN
+                    v_new_admin_balance := v_new_admin_balance + v_total_emis_collected;
+                    INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                    VALUES (p_admin_account_id, 'CREDIT', v_total_emis_collected, v_new_admin_balance, 'EOM Loan EMI Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-EMI-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+                END IF;
+                
+                -- Update final admin balance
+                UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
+            END IF;
         EXCEPTION WHEN OTHERS THEN
             -- If the Admin treasury is already maxed out (e.g. from RBI Claims), 
             -- crediting it further will cause a numeric overflow. We gracefully catch this 
