@@ -73,7 +73,14 @@ export default function CurrencyExchangePage() {
             </div>
 
             <div className="flex justify-center -my-2 relative z-10">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors">
+              <div 
+                onClick={() => {
+                  const temp = fromCurrency;
+                  setFromCurrency(toCurrency);
+                  setToCurrency(temp);
+                }}
+                className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors"
+              >
                 <ArrowRightLeft size={18} className="rotate-90" />
               </div>
             </div>
