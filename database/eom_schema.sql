@@ -12,10 +12,21 @@ CREATE TABLE IF NOT EXISTS public.eom_tracking (
 -- Index for fast idempotency lookups
 CREATE INDEX IF NOT EXISTS idx_eom_tracking_lookup ON public.eom_tracking(account_id, period_month, period_year);
 
--- RPC for Bulk EOM Processing
--- This function processes an array of account IDs, applies interest and fees, 
--- creates transaction logs, and records idempotency in a single database transaction.
+-- EOM Loan Tracking Table for Idempotency
+CREATE TABLE IF NOT EXISTS public.eom_loan_tracking (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    loan_id UUID REFERENCES public.loans(id) ON DELETE CASCADE,
+    period_month INTEGER NOT NULL,
+    period_year INTEGER NOT NULL,
+    status VARCHAR(50) DEFAULT 'PROCESSED',
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(loan_id, period_month, period_year)
+);
 
+CREATE INDEX IF NOT EXISTS idx_eom_loan_tracking_lookup ON public.eom_loan_tracking(loan_id, period_month, period_year);
+
+
+-- RPC for Bulk EOM Processing
 -- Drop the old function signatures just in case Postgres complains about type changes
 DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, DECIMAL, DECIMAL);
 DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, NUMERIC, NUMERIC);
@@ -25,15 +36,20 @@ CREATE OR REPLACE FUNCTION process_eom_batch(
     p_account_ids UUID[], 
     p_month INTEGER, 
     p_year INTEGER,
-    p_interest_rate NUMERIC DEFAULT 0.0,
-    p_monthly_fee NUMERIC DEFAULT 0.0,
+    p_interest_rate_pa NUMERIC DEFAULT 4.0,
+    p_monthly_fee NUMERIC DEFAULT 50.0,
     p_admin_account_id UUID DEFAULT NULL
 ) RETURNS INTEGER AS $$
 DECLARE
     v_account_id UUID;
+    v_user_id UUID;
+    v_account_type VARCHAR;
     v_balance NUMERIC;
     v_new_balance NUMERIC;
     v_interest_amount NUMERIC;
+    
+    v_loan RECORD;
+    
     v_processed_count INTEGER := 0;
     v_total_fees_collected NUMERIC := 0;
     v_admin_balance NUMERIC;
@@ -47,11 +63,19 @@ BEGIN
             
             BEGIN
                 -- Lock account row for update to prevent race conditions
-                SELECT COALESCE(balance, 0.00) INTO v_balance FROM public.accounts WHERE id = v_account_id FOR UPDATE;
+                SELECT user_id, account_type, COALESCE(balance, 0.00) 
+                INTO v_user_id, v_account_type, v_balance 
+                FROM public.accounts WHERE id = v_account_id FOR UPDATE;
                 
                 IF FOUND THEN
-                    -- Calculate EOM changes and round to 2 decimal places to prevent overflow
-                    v_interest_amount := ROUND((v_balance * (p_interest_rate / 100.0))::numeric, 2);
+                    v_interest_amount := 0;
+                    
+                    -- Calculate EOM changes (Interest applies only to SAVINGS)
+                    IF v_account_type = 'SAVINGS' THEN
+                        -- Monthly interest rate is (Annual Rate / 12)
+                        v_interest_amount := ROUND((v_balance * ((p_interest_rate_pa / 100.0) / 12.0))::numeric, 2);
+                    END IF;
+                    
                     v_new_balance := ROUND((v_balance + v_interest_amount - p_monthly_fee)::numeric, 2);
                     
                     -- Update balance
@@ -71,6 +95,38 @@ BEGIN
                         -- Aggregate fees for the admin
                         v_total_fees_collected := v_total_fees_collected + p_monthly_fee;
                     END IF;
+                    
+                    -- ----------------------------------------------------
+                    -- LOAN EMI PROCESSING
+                    -- ----------------------------------------------------
+                    FOR v_loan IN 
+                        SELECT id, emi_amount, total_payable, loan_type 
+                        FROM public.loans 
+                        WHERE user_id = v_user_id AND status = 'ACTIVE'
+                    LOOP
+                        -- Check if EMI for this specific loan was already paid this month
+                        IF NOT EXISTS (SELECT 1 FROM public.eom_loan_tracking WHERE loan_id = v_loan.id AND period_month = p_month AND period_year = p_year) THEN
+                            
+                            -- Deduct EMI from account balance
+                            v_new_balance := ROUND((v_new_balance - v_loan.emi_amount)::numeric, 2);
+                            UPDATE public.accounts SET balance = v_new_balance WHERE id = v_account_id;
+                            
+                            -- Record Transaction
+                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+                            VALUES (v_account_id, 'DEBIT', v_loan.emi_amount, v_new_balance, 'Loan EMI Deduction (' || v_loan.loan_type || ')', 'EOM-EMI-' || p_year || '-' || p_month || '-' || substr(v_loan.id::text, 1, 8));
+                            
+                            -- Update Loan Balance
+                            IF (v_loan.total_payable - v_loan.emi_amount) <= 0 THEN
+                                UPDATE public.loans SET total_payable = 0, status = 'CLOSED' WHERE id = v_loan.id;
+                            ELSE
+                                UPDATE public.loans SET total_payable = v_loan.total_payable - v_loan.emi_amount WHERE id = v_loan.id;
+                            END IF;
+                            
+                            -- Record loan idempotency
+                            INSERT INTO public.eom_loan_tracking (loan_id, period_month, period_year, status)
+                            VALUES (v_loan.id, p_month, p_year, 'PROCESSED');
+                        END IF;
+                    END LOOP;
 
                     -- Mark as processed for idempotency
                     INSERT INTO public.eom_tracking (account_id, period_month, period_year, status)
@@ -79,9 +135,7 @@ BEGIN
                     v_processed_count := v_processed_count + 1;
                 END IF;
             EXCEPTION WHEN OTHERS THEN
-                -- If an error occurs (e.g., numeric field overflow because the user's test balance is too high),
-                -- we gracefully catch it. Postgres automatically rolls back ONLY this specific account's subtransaction.
-                -- We continue to the next account so the rest of the queue doesn't fail.
+                -- If an error occurs, gracefully catch it.
                 CONTINUE;
             END;
         END IF;

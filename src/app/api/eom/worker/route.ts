@@ -52,13 +52,13 @@ export async function POST(request: Request) {
     const adminAccountId = adminData ? adminData.id : null;
 
     // Call Supabase RPC for database optimization (bulk update)
-    // We pass 0.5% interest rate and $5.00 maintenance fee as an example
+    // Pass 4.0% p.a. interest rate and 50.0 flat maintenance fee
     const { data: processedCount, error } = await supabaseAdmin.rpc('process_eom_batch', {
       p_account_ids: poppedIds,
       p_month: month,
       p_year: year,
-      p_interest_rate: 0.5,
-      p_monthly_fee: 5.0,
+      p_interest_rate_pa: 4.0,
+      p_monthly_fee: 50.0,
       p_admin_account_id: adminAccountId
     });
 
