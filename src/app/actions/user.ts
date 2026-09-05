@@ -926,3 +926,54 @@ export async function clearLoginHistory() {
   revalidatePath("/dashboard/security");
   return { success: true, message: "Login history cleared" };
 }
+
+export async function exchangeCurrency(fromCurrency: string, toCurrency: string, amount: number, convertedAmount: number) {
+  const supabase = await createClient();
+  const account = await getUserAccount();
+  if (!account) return { error: "Account not found" };
+
+  const getCol = (curr: string) => {
+    if (curr === 'INR') return 'balance';
+    if (curr === 'USD') return 'usd_balance';
+    if (curr === 'EUR') return 'eur_balance';
+    return null;
+  };
+
+  const fromCol = getCol(fromCurrency);
+  const toCol = getCol(toCurrency);
+
+  if (!fromCol || !toCol) return { error: "Invalid currency" };
+
+  const currentFromBalance = Number(account[fromCol]);
+  const currentToBalance = Number(account[toCol]);
+
+  if (currentFromBalance < amount) {
+    return { error: "Insufficient funds" };
+  }
+
+  const newFromBalance = currentFromBalance - amount;
+  const newToBalance = currentToBalance + convertedAmount;
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({ 
+      [fromCol]: newFromBalance,
+      [toCol]: newToBalance
+    })
+    .eq("id", account.id);
+
+  if (error) return { error: error.message };
+
+  await supabase.from("transactions").insert({
+    account_id: account.id,
+    type: "DEBIT",
+    amount: amount,
+    balance_after: fromCurrency === 'INR' ? newFromBalance : account.balance,
+    description: `Currency Exchange: ${fromCurrency} to ${toCurrency}`,
+    reference_number: `EXC-${Date.now()}`,
+    sender_details: `Your ${fromCurrency} Wallet`,
+    receiver_details: `Your ${toCurrency} Wallet`
+  });
+
+  return { success: true };
+}

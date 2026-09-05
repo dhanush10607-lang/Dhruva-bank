@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, ArrowRightLeft, DollarSign, Euro, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUserAccount } from "@/app/actions/user";
+import { getUserAccount, exchangeCurrency } from "@/app/actions/user";
 
 export default function CurrencyExchangePage() {
   const [amount, setAmount] = useState<string>("1000");
@@ -20,10 +20,11 @@ export default function CurrencyExchangePage() {
     async function fetchBalance() {
       const account = await getUserAccount();
       if (account) {
-        setBalances(prev => ({
-          ...prev,
-          INR: Number(account.balance)
-        }));
+        setBalances({
+          INR: Number(account.balance) || 0,
+          USD: Number(account.usd_balance) || 0,
+          EUR: Number(account.eur_balance) || 0,
+        });
       }
     }
     fetchBalance();
@@ -42,7 +43,7 @@ export default function CurrencyExchangePage() {
     EUR: "€",
   };
 
-  const handleConvert = (e: React.FormEvent) => {
+  const handleConvert = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(amount);
     if (balances[fromCurrency] < amountNum) {
@@ -51,15 +52,23 @@ export default function CurrencyExchangePage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setBalances(prev => ({
-        ...prev,
-        [fromCurrency]: prev[fromCurrency] - amountNum,
-        [toCurrency]: prev[toCurrency] + Number(convertedAmount)
-      }));
-      alert(`Successfully converted ${symbols[fromCurrency]}${amount} to ${symbols[toCurrency]}${convertedAmount}`);
-    }, 1000);
+    const convertedNum = Number(convertedAmount);
+    
+    const result = await exchangeCurrency(fromCurrency, toCurrency, amountNum, convertedNum);
+    
+    setLoading(false);
+
+    if (result?.error) {
+      alert(`Error: ${result.error}`);
+      return;
+    }
+
+    setBalances(prev => ({
+      ...prev,
+      [fromCurrency]: prev[fromCurrency] - amountNum,
+      [toCurrency]: prev[toCurrency] + convertedNum
+    }));
+    alert(`Successfully converted ${symbols[fromCurrency]}${amount} to ${symbols[toCurrency]}${convertedAmount}`);
   };
 
   const convertedAmount = (Number(amount) * (rates[toCurrency] / rates[fromCurrency])).toFixed(2);
