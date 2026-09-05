@@ -85,13 +85,13 @@ BEGIN
                     
                     v_new_balance := ROUND((v_balance + v_interest_amount - p_monthly_fee)::numeric, 2);
                     
-                    -- Update balance
-                    UPDATE public.accounts SET balance = v_new_balance WHERE id = v_account_id;
-                    
                     -- Insert transaction for interest if applicable
                     IF v_interest_amount > 0 THEN
                         INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
                         VALUES (v_account_id, 'CREDIT', v_interest_amount, v_balance + v_interest_amount, 'Monthly Interest (' || p_month || '/' || p_year || ')', 'EOM-INT-' || p_year || '-' || p_month || '-' || substr(v_account_id::text, 1, 8));
+                        
+                        -- Aggregate paid interest to deduct from Admin Treasury later
+                        v_total_savings_interest_paid := v_total_savings_interest_paid + v_interest_amount;
                     END IF;
 
                     -- Insert transaction for fee if applicable
@@ -101,22 +101,6 @@ BEGIN
                         
                         -- Aggregate fees for the admin
                         v_total_fees_collected := v_total_fees_collected + p_monthly_fee;
-                    END IF;
-                    
-                    -- ----------------------------------------------------
-                    -- SAVINGS INTEREST PROCESSING
-                    -- ----------------------------------------------------
-                    IF v_account_type = 'SAVINGS' THEN
-                        v_interest_amount := ROUND((v_balance * (p_interest_rate_pa / 100.0) / 12.0)::numeric, 2);
-                        IF v_interest_amount > 0 THEN
-                            v_new_balance := ROUND((v_new_balance + v_interest_amount)::numeric, 2);
-                            
-                            INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
-                            VALUES (v_account_id, 'CREDIT', v_interest_amount, v_new_balance, 'Monthly Interest', 'EOM-INT-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 8));
-                            
-                            -- Aggregate paid interest to deduct from Admin Treasury later
-                            v_total_savings_interest_paid := v_total_savings_interest_paid + v_interest_amount;
-                        END IF;
                     END IF;
                     
                     -- ----------------------------------------------------
