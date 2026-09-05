@@ -1,8 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import bcrypt from "bcryptjs";
 
 export const getUserProfile = cache(async () => {
@@ -618,12 +619,13 @@ export async function openFixedDeposit(prevState: any, formData: FormData) {
     receiver_details: "Dhruva Bank FD Dept"
   });
 
-  // Double-Entry: Credit Admin Treasury
-  const { data: adminAcc } = await supabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
+  // Double-Entry: Credit Admin Treasury (Requires Admin Client to bypass RLS)
+  const adminSupabase = createAdminClient();
+  const { data: adminAcc } = await adminSupabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
   if (adminAcc) {
     const newAdminBalance = Number(adminAcc.balance) + amount;
-    await supabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
-    await supabase.from("transactions").insert({
+    await adminSupabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
+    await adminSupabase.from("transactions").insert({
       account_id: adminAcc.id,
       type: "CREDIT",
       amount: amount,
@@ -694,12 +696,13 @@ export async function breakFixedDeposit(fdId: string) {
     receiver_details: "Your Savings Account"
   });
 
-  // Double-Entry: Debit Admin Treasury
-  const { data: adminAcc } = await supabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
+  // Double-Entry: Debit Admin Treasury (Requires Admin Client to bypass RLS)
+  const adminSupabase = createAdminClient();
+  const { data: adminAcc } = await adminSupabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
   if (adminAcc) {
     const newAdminBalance = Number(adminAcc.balance) - refundAmount;
-    await supabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
-    await supabase.from("transactions").insert({
+    await adminSupabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
+    await adminSupabase.from("transactions").insert({
       account_id: adminAcc.id,
       type: "DEBIT",
       amount: refundAmount,
