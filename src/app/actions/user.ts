@@ -964,13 +964,19 @@ export async function exchangeCurrency(fromCurrency: string, toCurrency: string,
 
   if (error) return { error: error.message };
 
+  const isCredit = toCurrency === 'INR';
+  const type = isCredit ? 'CREDIT' : 'DEBIT';
+  const refNum = `EXC-${Date.now()}${isCredit ? '-C' : '-D'}`;
+  const logAmount = isCredit ? convertedAmount : amount;
+  const logBalanceAfter = isCredit ? newToBalance : (fromCurrency === 'INR' ? newFromBalance : account.balance);
+
   await supabase.from("transactions").insert({
     account_id: account.id,
-    type: "DEBIT",
-    amount: amount,
-    balance_after: fromCurrency === 'INR' ? newFromBalance : account.balance,
+    type: type,
+    amount: logAmount,
+    balance_after: logBalanceAfter,
     description: `Currency Exchange: ${fromCurrency} to ${toCurrency}`,
-    reference_number: `EXC-${Date.now()}`,
+    reference_number: refNum,
     sender_details: `Your ${fromCurrency} Wallet`,
     receiver_details: `Your ${toCurrency} Wallet`
   });
