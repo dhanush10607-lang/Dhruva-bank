@@ -15,5 +15,5 @@ TRUNCATE TABLE
 CASCADE;
 
 -- NOTE: If you also want to delete all authentication users (emails/passwords), 
--- you will need to run the following command separately:
+-- you will need to run thea following command separately:
 -- TRUNCATE TABLE auth.users CASCADE;

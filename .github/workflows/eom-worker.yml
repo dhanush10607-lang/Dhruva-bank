@@ -1,0 +1,58 @@
+name: End of Month Processing Cron
+
+on:
+  schedule:
+    # Run at 00:00 on the 1st of every month
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # Allow manual triggering from GitHub UI
+
+jobs:
+  eom_processing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start EOM Job Enqueuing
+        id: start_eom
+        run: |
+          echo "Starting EOM process..."
+          curl -s -X POST "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/eom/start" \
+               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+               -H "Content-Type: application/json"
+
+      - name: Process Queue in Batches
+        run: |
+          echo "Processing batches..."
+          REMAINING=1
+          
+          while [ $REMAINING -gt 0 ]; do
+            # Wait a few seconds between batches to avoid rate limiting API routes and Database
+            sleep 2
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/eom/worker" \
+                 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+                 -H "Content-Type: application/json")
+            
+            HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+            HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+            
+            echo "Worker HTTP Status: $HTTP_STATUS"
+            echo "Worker Response Body: $HTTP_BODY"
+            
+            if [ "$HTTP_STATUS" -ne 200 ]; then
+              echo "Error occurred (HTTP $HTTP_STATUS). Will retry next time."
+              # You can choose to break or retry depending on robustness needs.
+              # Breaking here prevents infinite loops if there's a hard error.
+              break
+            fi
+            
+            # Extract remaining_in_queue using jq, default to 0 if parsing fails
+            REMAINING=$(echo "$HTTP_BODY" | jq -r '.remaining_in_queue // 0')
+            
+            if [ "$REMAINING" = "null" ] || [ "$REMAINING" = "" ]; then
+              echo "Error parsing remaining queue size or fatal error occurred. Stopping."
+              break
+            fi
+            
+            echo "Remaining in queue: $REMAINING"
+          done
+          
+          echo "EOM Processing Completed!"
