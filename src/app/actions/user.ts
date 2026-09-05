@@ -618,6 +618,21 @@ export async function openFixedDeposit(prevState: any, formData: FormData) {
     receiver_details: "Dhruva Bank FD Dept"
   });
 
+  // Double-Entry: Credit Admin Treasury
+  const { data: adminAcc } = await supabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
+  if (adminAcc) {
+    const newAdminBalance = Number(adminAcc.balance) + amount;
+    await supabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
+    await supabase.from("transactions").insert({
+      account_id: adminAcc.id,
+      type: "CREDIT",
+      amount: amount,
+      balance_after: newAdminBalance,
+      description: `Principal Collection: New FD (${tenureMonths} Months)`,
+      reference_number: `FD-OPEN-${Date.now()}-ADMIN`,
+    });
+  }
+
   // Create FD Record
   const { error } = await supabase
     .from("fixed_deposits")
@@ -678,6 +693,21 @@ export async function breakFixedDeposit(fdId: string) {
     sender_details: "Dhruva Bank FD Dept",
     receiver_details: "Your Savings Account"
   });
+
+  // Double-Entry: Debit Admin Treasury
+  const { data: adminAcc } = await supabase.from("accounts").select("id, balance").eq("account_number", "RBI-TREASURY").single();
+  if (adminAcc) {
+    const newAdminBalance = Number(adminAcc.balance) - refundAmount;
+    await supabase.from("accounts").update({ balance: newAdminBalance }).eq("id", adminAcc.id);
+    await supabase.from("transactions").insert({
+      account_id: adminAcc.id,
+      type: "DEBIT",
+      amount: refundAmount,
+      balance_after: newAdminBalance,
+      description: `Principal Refund: Early FD Closure`,
+      reference_number: `FD-CLOSE-${Date.now()}-ADMIN`,
+    });
+  }
 
   // Mark FD as broken
   const { error } = await supabase
