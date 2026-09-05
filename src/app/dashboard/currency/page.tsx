@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, ArrowRightLeft, DollarSign, Euro, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUserAccount } from "@/app/actions/user";
 
 export default function CurrencyExchangePage() {
   const [amount, setAmount] = useState<string>("1000");
@@ -10,10 +11,23 @@ export default function CurrencyExchangePage() {
   const [toCurrency, setToCurrency] = useState("USD");
   const [loading, setLoading] = useState(false);
   const [balances, setBalances] = useState<Record<string, number>>({
-    INR: 145200,
+    INR: 0,
     USD: 0,
     EUR: 0,
   });
+
+  useEffect(() => {
+    async function fetchBalance() {
+      const account = await getUserAccount();
+      if (account) {
+        setBalances(prev => ({
+          ...prev,
+          INR: Number(account.balance)
+        }));
+      }
+    }
+    fetchBalance();
+  }, []);
 
   // Simulated exchange rates (In a real app, this would come from an API or DB)
   const rates: Record<string, number> = {
