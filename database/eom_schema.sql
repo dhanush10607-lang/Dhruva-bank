@@ -19,13 +19,15 @@ CREATE INDEX IF NOT EXISTS idx_eom_tracking_lookup ON public.eom_tracking(accoun
 -- Drop the old function signatures just in case Postgres complains about type changes
 DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, DECIMAL, DECIMAL);
 DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, NUMERIC, NUMERIC);
+DROP FUNCTION IF EXISTS process_eom_batch(UUID[], INTEGER, INTEGER, NUMERIC, NUMERIC, UUID);
 
 CREATE OR REPLACE FUNCTION process_eom_batch(
     p_account_ids UUID[], 
     p_month INTEGER, 
     p_year INTEGER,
     p_interest_rate NUMERIC DEFAULT 0.0,
-    p_monthly_fee NUMERIC DEFAULT 0.0
+    p_monthly_fee NUMERIC DEFAULT 0.0,
+    p_admin_account_id UUID DEFAULT NULL
 ) RETURNS INTEGER AS $$
 DECLARE
     v_account_id UUID;
@@ -33,6 +35,9 @@ DECLARE
     v_new_balance NUMERIC;
     v_interest_amount NUMERIC;
     v_processed_count INTEGER := 0;
+    v_total_fees_collected NUMERIC := 0;
+    v_admin_balance NUMERIC;
+    v_new_admin_balance NUMERIC;
 BEGIN
     FOR i IN 1 .. array_length(p_account_ids, 1) LOOP
         v_account_id := p_account_ids[i];
@@ -62,6 +67,9 @@ BEGIN
                     IF p_monthly_fee > 0 THEN
                         INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
                         VALUES (v_account_id, 'DEBIT', p_monthly_fee, v_new_balance, 'Monthly Maintenance Fee (' || p_month || '/' || p_year || ')', 'EOM-FEE-' || p_year || '-' || p_month || '-' || substr(v_account_id::text, 1, 8));
+                        
+                        -- Aggregate fees for the admin
+                        v_total_fees_collected := v_total_fees_collected + p_monthly_fee;
                     END IF;
 
                     -- Mark as processed for idempotency
@@ -79,6 +87,17 @@ BEGIN
         END IF;
     END LOOP;
     
+    -- Credit total collected fees to the admin account in a single operation
+    IF p_admin_account_id IS NOT NULL AND v_total_fees_collected > 0 THEN
+        SELECT COALESCE(balance, 0.00) INTO v_admin_balance FROM public.accounts WHERE id = p_admin_account_id FOR UPDATE;
+        v_new_admin_balance := v_admin_balance + v_total_fees_collected;
+        
+        UPDATE public.accounts SET balance = v_new_admin_balance WHERE id = p_admin_account_id;
+        
+        INSERT INTO public.transactions (account_id, type, amount, balance_after, description, reference_number)
+        VALUES (p_admin_account_id, 'CREDIT', v_total_fees_collected, v_new_admin_balance, 'EOM Fee Collection Batch (' || p_month || '/' || p_year || ')', 'EOM-COL-BATCH-' || p_year || '-' || p_month || '-' || substr(gen_random_uuid()::text, 1, 12));
+    END IF;
+
     RETURN v_processed_count;
 END;
 $$ LANGUAGE plpgsql;

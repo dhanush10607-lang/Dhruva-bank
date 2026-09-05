@@ -41,6 +41,16 @@ export async function POST(request: Request) {
     // Ensure it's an array (Upstash might return a single string if only 1 item was popped)
     poppedIds = Array.isArray(accountIds) ? accountIds : [accountIds];
 
+    // Fetch the primary admin account to credit collected fees to
+    const { data: adminData } = await supabaseAdmin
+      .from('accounts')
+      .select('id, users!inner(role)')
+      .in('users.role', ['SUPER_ADMIN', 'ADMIN'])
+      .limit(1)
+      .single();
+      
+    const adminAccountId = adminData ? adminData.id : null;
+
     // Call Supabase RPC for database optimization (bulk update)
     // We pass 0.5% interest rate and $5.00 maintenance fee as an example
     const { data: processedCount, error } = await supabaseAdmin.rpc('process_eom_batch', {
@@ -48,7 +58,8 @@ export async function POST(request: Request) {
       p_month: month,
       p_year: year,
       p_interest_rate: 0.5,
-      p_monthly_fee: 5.0
+      p_monthly_fee: 5.0,
+      p_admin_account_id: adminAccountId
     });
 
     if (error) {
