@@ -15,6 +15,7 @@ import {
   HandCoins,
   LifeBuoy,
   Settings,
+  Store,
   Menu,
   X
 } from "lucide-react";
@@ -123,6 +124,10 @@ export default function AdminSidebar({ logoutAction }: AdminSidebarProps) {
           <Link onClick={closeSidebar} href="/admin/settings" className={getLinkClasses("/admin/settings")}>
             <Settings size={18} className="shrink-0" />
             System Settings
+          </Link>
+          <Link onClick={closeSidebar} href="/admin/merchants" className={getLinkClasses("/admin/merchants")}>
+            <Store size={18} className="shrink-0" />
+            Merchants (RailConnect)
           </Link>
           <Link onClick={closeSidebar} href="/admin/rbi-claims" className={`mt-6 ${getLinkClasses("/admin/rbi-claims")}`}>
             <ShieldAlert size={18} className="shrink-0" />
