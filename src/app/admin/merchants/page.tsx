@@ -1,18 +1,27 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { provisionRailConnectMerchant } from "@/lib/merchant/provision";
+import { verifyAdmin } from "@/app/actions/admin";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Store, ShieldCheck, ArrowRight, CheckCircle2, AlertOctagon, Key, Activity } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMerchantsPage() {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) redirect("/login");
+
   const supabase = createAdminClient();
 
-  // Automatically ensure RailConnect merchant is provisioned
-  await provisionRailConnectMerchant(false);
+  // Safely ensure RailConnect merchant is provisioned
+  try {
+    await provisionRailConnectMerchant(false);
+  } catch (provErr) {
+    console.error("Auto-provision merchant notice:", provErr);
+  }
 
   // Fetch all merchants
-  const { data: merchants } = await supabase
+  const { data: merchants, error: merchErr } = await supabase
     .from("merchants")
     .select(`
       *,
@@ -28,6 +37,10 @@ export default async function AdminMerchantsPage() {
       )
     `)
     .order("created_at", { ascending: false });
+
+  if (merchErr) {
+    console.error("Fetch merchants error:", merchErr);
+  }
 
   // Fetch Payment Intents stats
   const { count: totalIntents } = await supabase

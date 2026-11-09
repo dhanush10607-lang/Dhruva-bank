@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdmin } from "@/app/actions/admin";
 import { toggleMerchantStatus, rotateCredentialsAction, resendWebhookAction } from "../actions";
 import { 
   Store, 
@@ -22,6 +23,9 @@ interface MerchantDetailPageProps {
 }
 
 export default async function MerchantDetailPage({ params }: MerchantDetailPageProps) {
+  const isAdmin = await verifyAdmin();
+  if (!isAdmin) redirect("/login");
+
   const { merchantId } = await params;
   const supabase = createAdminClient();
 
