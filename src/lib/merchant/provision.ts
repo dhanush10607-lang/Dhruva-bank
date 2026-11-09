@@ -157,7 +157,7 @@ export async function provisionRailConnectMerchant(forceNewKey: boolean = false)
     plainApiKey = `key_live_${crypto.randomBytes(16).toString("hex")}`;
     plainApiSecret = `sec_live_${crypto.randomBytes(24).toString("hex")}`;
     const secretHash = crypto.createHash("sha256").update(plainApiSecret).digest("hex");
-    const secretPreview = `${plainApiSecret.slice(0, 7)}...${plainApiSecret.slice(-4)}`;
+    const secretPreview = `${plainApiSecret.slice(0, 4)}...${plainApiSecret.slice(-4)}`;
 
     const { error: credErr } = await supabase
       .from("merchant_credentials")
@@ -202,7 +202,7 @@ export async function rotateMerchantCredentials(merchantId: string) {
   const plainApiKey = `key_live_${crypto.randomBytes(16).toString("hex")}`;
   const plainApiSecret = `sec_live_${crypto.randomBytes(24).toString("hex")}`;
   const secretHash = crypto.createHash("sha256").update(plainApiSecret).digest("hex");
-  const secretPreview = `${plainApiSecret.slice(0, 7)}...${plainApiSecret.slice(-4)}`;
+  const secretPreview = `${plainApiSecret.slice(0, 4)}...${plainApiSecret.slice(-4)}`;
 
   const { data: newCred, error: credErr } = await supabase
     .from("merchant_credentials")

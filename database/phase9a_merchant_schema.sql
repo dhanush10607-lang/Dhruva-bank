@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.merchant_credentials (
     merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE CASCADE,
     api_key VARCHAR(100) UNIQUE NOT NULL, -- Public Key identifier (e.g. key_test_rc_xxx)
     api_secret_hash VARCHAR(255) NOT NULL, -- Hashed secret for verification
-    api_secret_preview VARCHAR(12) NOT NULL, -- Masked display (e.g. sec_***abc)
+    api_secret_preview VARCHAR(50) NOT NULL, -- Masked display (e.g. sec_live_...abc)
     status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'REVOKED')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     revoked_at TIMESTAMP WITH TIME ZONE
