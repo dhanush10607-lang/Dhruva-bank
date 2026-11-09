@@ -31,8 +31,8 @@ Creates a new checkout intent for an upcoming booking payment.
   "currency": "INR",
   "description": "RailConnect Train 12951 Mumbai Rajdhani - 2AC",
   "idempotency_key": "idemp_rc_902341_attempt_1",
-  "success_url": "https://railconnect.vercel.app/payment/success",
-  "failure_url": "https://railconnect.vercel.app/payment/cancel",
+  "success_url": "https://irctc-rho.vercel.app/payment/success",
+  "failure_url": "https://irctc-rho.vercel.app/payment/cancel",
   "expires_in_seconds": 900,
   "metadata": {
     "train_number": "12951",

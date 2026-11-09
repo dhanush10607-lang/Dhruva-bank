@@ -101,12 +101,12 @@ export async function provisionRailConnectMerchant(forceNewKey: boolean = false)
         status: "ACTIVE",
         settlement_account_id: settlementAccountId,
         contact_email: "payments@railconnect.demo",
-        webhook_url: "https://railconnect.vercel.app/api/webhooks/dhruva-pay",
+        webhook_url: "https://irctc-rho.vercel.app/api/webhooks/dhruva-pay",
         webhook_secret: defaultWebhookSecret,
         allowed_redirect_origins: [
           "http://localhost:3000",
           "http://localhost:3001",
-          "https://railconnect.vercel.app",
+          "https://irctc-rho.vercel.app",
           "https://dhruva-bank.vercel.app",
         ],
         metadata: {

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.merchants (
     contact_email VARCHAR(255),
     webhook_url TEXT,
     webhook_secret VARCHAR(255),
-    allowed_redirect_origins TEXT[] DEFAULT ARRAY['http://localhost:3000', 'https://railconnect.vercel.app'],
+    allowed_redirect_origins TEXT[] DEFAULT ARRAY['http://localhost:3000', 'https://irctc-rho.vercel.app', 'https://dhruva-bank.vercel.app'],
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
