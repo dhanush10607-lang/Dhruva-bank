@@ -588,12 +588,12 @@ export async function getAdminTreasury() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Check if admin has a treasury account
+  // Check if admin has a treasury account specifically
   const { data: account } = await supabase
     .from("accounts")
     .select("*")
-    .eq("user_id", user.id)
-    .single();
+    .eq("account_number", "RBI-TREASURY")
+    .maybeSingle();
 
   if (account) return account;
 

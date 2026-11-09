@@ -58,14 +58,6 @@ export async function provisionRailConnectMerchant(forceNewKey: boolean = false)
   if (existingAccount) {
     settlementAccountId = existingAccount.id;
   } else {
-    // Look for an admin user to associate the merchant account with if user_id is required
-    const { data: adminUser } = await supabase
-      .from("users")
-      .select("id")
-      .in("role", ["ADMIN", "SUPER_ADMIN"])
-      .limit(1)
-      .maybeSingle();
-
     const { data: newAccount, error: accErr } = await supabase
       .from("accounts")
       .insert({
@@ -74,7 +66,7 @@ export async function provisionRailConnectMerchant(forceNewKey: boolean = false)
         balance: 0.00,
         currency: "INR",
         status: "ACTIVE",
-        user_id: adminUser?.id || null,
+        user_id: null, // Dedicated merchant entity account, not tied to any personal customer user
       })
       .select("id")
       .single();
