@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useEffect } from "react";
 import { authorizeCheckoutPayment } from "./actions";
-import { ShieldCheck, Lock, AlertCircle, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Lock, AlertCircle, ArrowRight, Loader2, CheckCircle2, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CheckoutClientProps {
@@ -16,10 +16,33 @@ export default function CheckoutClient({ session, accounts, userProfile }: Check
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || "");
   const [mpin, setMpin] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(3);
+  const [timeRemaining, setTimeRemaining] = useState<number>(30);
+  const [isTimedOut, setIsTimedOut] = useState<boolean>(false);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
   const isInsufficient = selectedAccount ? Number(selectedAccount.balance) < Number(session.amount) : true;
   const isSuccess = Boolean(state?.success || session.status === "SUCCEEDED");
+
+  // Payment cancellation failure URL
+  const failureReturnUrl = session.failure_url || `https://irctc-rho.vercel.app/laptop/payment/return?paymentId=${session.idempotency_key?.replace('railconnect-', '')}&outcome=cancel`;
+
+  // 30-second checkout timer upon page load
+  useEffect(() => {
+    if (isSuccess || isTimedOut) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsTimedOut(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isSuccess, isTimedOut]);
 
   const successReturnUrl = new URL(session.success_url);
   successReturnUrl.searchParams.set("status", "SUCCESS");
@@ -45,6 +68,29 @@ export default function CheckoutClient({ session, accounts, userProfile }: Check
 
     return () => clearInterval(timer);
   }, [isSuccess, redirectTarget]);
+
+  if (isTimedOut) {
+    return (
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center shadow-xl">
+        <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Timer size={36} />
+        </div>
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">Payment Time Limit Exceeded</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+          The 30-second window to complete this payment has expired. Your account has not been charged.
+        </p>
+        <div className="mt-6">
+          <a
+            href={failureReturnUrl}
+            className="inline-flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl bg-zinc-800 hover:bg-zinc-900 text-white font-medium shadow-md transition-colors"
+          >
+            Return to RailConnect
+            <ArrowRight size={18} />
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -92,6 +138,21 @@ export default function CheckoutClient({ session, accounts, userProfile }: Check
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+      {/* 30-Second Payment Timeout Banner */}
+      <div className={`mb-6 p-3.5 rounded-2xl flex items-center justify-between border transition-all ${
+        timeRemaining <= 10
+          ? "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 animate-pulse"
+          : "bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300"
+      }`}>
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <Timer size={16} className={timeRemaining <= 10 ? "text-red-600" : "text-blue-600"} />
+          <span>Complete payment within</span>
+        </div>
+        <span className="font-mono font-bold text-sm px-2.5 py-0.5 rounded-full bg-white dark:bg-zinc-800 shadow-sm">
+          00:{timeRemaining < 10 ? `0${timeRemaining}` : timeRemaining}
+        </span>
+      </div>
+
       {state?.error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start gap-3 text-red-700 dark:text-red-400 text-sm">
           <AlertCircle size={20} className="shrink-0 mt-0.5" />
