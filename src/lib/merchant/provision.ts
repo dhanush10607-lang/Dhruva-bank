@@ -164,6 +164,17 @@ export async function provisionRailConnectMerchant(forceNewKey: boolean = false)
     if (credErr) {
       throw new Error(`Failed to create merchant API credentials: ${credErr.message}`);
     }
+
+    // Update merchant metadata with current active secret
+    await supabase
+      .from("merchants")
+      .update({
+        metadata: {
+          ...(merchant.metadata || {}),
+          active_api_secret: plainApiSecret,
+        },
+      })
+      .eq("id", merchant.id);
   }
 
   return {
@@ -211,6 +222,23 @@ export async function rotateMerchantCredentials(merchantId: string) {
   if (credErr || !newCred) {
     throw new Error(`Failed to rotate merchant API credentials: ${credErr?.message}`);
   }
+
+  // Update merchant metadata with current active secret
+  const { data: currentMerchant } = await supabase
+    .from("merchants")
+    .select("metadata")
+    .eq("id", merchantId)
+    .single();
+
+  await supabase
+    .from("merchants")
+    .update({
+      metadata: {
+        ...(currentMerchant?.metadata || {}),
+        active_api_secret: plainApiSecret,
+      },
+    })
+    .eq("id", merchantId);
 
   // Log in audit log
   await supabase.from("merchant_audit_logs").insert({

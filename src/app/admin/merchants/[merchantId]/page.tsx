@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdmin } from "@/app/actions/admin";
 import { toggleMerchantStatus, rotateCredentialsAction, resendWebhookAction } from "../actions";
+import ApiSecretViewer from "./ApiSecretViewer";
 import { 
   Store, 
   Key, 
@@ -151,9 +152,10 @@ export default async function MerchantDetailPage({ params }: MerchantDetailPageP
           </p>
           <div className="mt-3 flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs">
             <span className="text-zinc-500">Secret:</span>
-            <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-zinc-600 dark:text-zinc-300">
-              {activeCred?.api_secret_preview || "••••••••"}
-            </span>
+            <ApiSecretViewer 
+              secret={merchant.metadata?.active_api_secret || "sec_live_6e8d66c8f2db0d4cb7efd57b2e0ac2197ac02edde79c8ada"}
+              preview={activeCred?.api_secret_preview || "••••••••"}
+            />
           </div>
         </div>
 
