@@ -122,9 +122,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate Hosted Checkout URL
+    const proto = request.headers.get("x-forwarded-proto") || "https";
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "dhruva-bank.vercel.app";
-    const proto = request.headers.get("x-forwarded-proto") || "http";
-    const checkoutUrl = `${proto}://${host}/checkout/${intent.session_id}`;
+    // Always enforce https for external/production checkouts
+    const scheme = host.includes("localhost") ? proto : "https";
+    const checkoutUrl = `${scheme}://${host}/checkout/${intent.session_id}`;
 
     return NextResponse.json(
       {
