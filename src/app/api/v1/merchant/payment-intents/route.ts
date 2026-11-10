@@ -129,6 +129,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        // Standard payload fields
+        payment_intent_id: intent.payment_intent_id,
+        session_id: intent.session_id,
+        merchant_order_ref: intent.merchant_order_ref,
+        booking_reference: intent.booking_reference,
+        amount: intent.amount,
+        currency: intent.currency,
+        status: intent.status,
+        checkout_url: checkoutUrl,
+        redirect_url: checkoutUrl,
+        expires_at: intent.expires_at,
+        created_at: intent.created_at,
+        is_idempotent_replay: !isNew,
+        // Also nested under data for clients expecting wrapped JSON
         data: {
           payment_intent_id: intent.payment_intent_id,
           session_id: intent.session_id,
@@ -138,6 +152,7 @@ export async function POST(request: NextRequest) {
           currency: intent.currency,
           status: intent.status,
           checkout_url: checkoutUrl,
+          redirect_url: checkoutUrl,
           expires_at: intent.expires_at,
           created_at: intent.created_at,
           is_idempotent_replay: !isNew,
