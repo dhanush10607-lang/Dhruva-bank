@@ -60,10 +60,17 @@ export async function authenticateMerchantRequest(
   request: NextRequest,
   rawBody?: string
 ): Promise<MerchantAuthResult> {
-  const apiKey = request.headers.get("x-merchant-key") || request.headers.get("x-api-key");
+  const apiKey =
+    request.headers.get("x-merchant-key") ||
+    request.headers.get("x-api-key") ||
+    request.headers.get("x-merchant-id");
   const authHeader = request.headers.get("authorization");
-  const signature = request.headers.get("x-signature");
-  const timestampStr = request.headers.get("x-timestamp");
+  const signature = request.headers.get("x-signature") || request.headers.get("x-merchant-signature");
+  const timestampStr = request.headers.get("x-timestamp") || request.headers.get("x-merchant-timestamp");
+  const headerSecret =
+    request.headers.get("x-merchant-secret") ||
+    request.headers.get("x-api-secret") ||
+    request.headers.get("api-secret");
 
   if (!apiKey) {
     return {
@@ -167,7 +174,7 @@ export async function authenticateMerchantRequest(
     // In demo environment, if Bearer token or x-merchant-secret header is provided, verify match
     const providedSecret = authHeader?.startsWith("Bearer ")
       ? authHeader.slice(7).trim()
-      : request.headers.get("x-merchant-secret");
+      : headerSecret;
 
     if (providedSecret) {
       const computedSecretHash = crypto.createHash("sha256").update(providedSecret).digest("hex");
@@ -211,10 +218,23 @@ export async function authenticateMerchantRequest(
         statusCode: 401,
       };
     }
+  } else if (headerSecret) {
+    // Method C: Direct Header Secret (x-merchant-secret / x-api-secret)
+    const secret = headerSecret.trim();
+    const computedHash = crypto.createHash("sha256").update(secret).digest("hex");
+    if (computedHash === credential.api_secret_hash) {
+      isValid = true;
+    } else {
+      return {
+        authenticated: false,
+        error: "Invalid merchant API secret header",
+        statusCode: 401,
+      };
+    }
   } else {
     return {
       authenticated: false,
-      error: "Missing authorization credentials (requires x-signature & x-timestamp, or Bearer secret)",
+      error: "Missing authorization credentials (requires x-signature & x-timestamp, Bearer secret, or x-merchant-secret)",
       statusCode: 401,
     };
   }
