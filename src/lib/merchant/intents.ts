@@ -55,29 +55,60 @@ export async function createPaymentIntent(
     .eq("idempotency_key", params.idempotencyKey)
     .maybeSingle();
 
+  const expirySecs = Math.max(1, params.expiresInSeconds || 900);
+  const expiresAt = new Date(Date.now() + expirySecs * 1000).toISOString();
+
   if (existingIntent) {
-    // If an existing intent is found but has expired or failed, allow creating a fresh one
     const isExpired = new Date(existingIntent.expires_at) <= new Date();
     if (existingIntent.status === "EXPIRED" || isExpired || existingIntent.status === "FAILED") {
-      if (existingIntent.status !== "EXPIRED" && isExpired) {
-        await supabase
-          .from("merchant_payment_intents")
-          .update({ status: "EXPIRED", updated_at: new Date().toISOString() })
-          .eq("id", existingIntent.id);
+      // Re-activate this existing record with fresh intent IDs and expiry
+      const paymentIntentId = `pi_${crypto.randomBytes(16).toString("hex")}`;
+      const sessionId = `cs_${crypto.randomBytes(20).toString("hex")}`;
+
+      const { data: renewedIntent, error } = await supabase
+        .from("merchant_payment_intents")
+        .update({
+          payment_intent_id: paymentIntentId,
+          session_id: sessionId,
+          merchant_order_ref: params.merchantOrderRef,
+          booking_reference: params.bookingReference,
+          customer_reference: params.customerReference || null,
+          amount: params.amount,
+          currency: params.currency || "INR",
+          description: params.description || `RailConnect Booking #${params.bookingReference}`,
+          status: "CREATED",
+          success_url: params.successUrl,
+          failure_url: params.failureUrl,
+          expires_at: expiresAt,
+          metadata: params.metadata || {},
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingIntent.id)
+        .select("*")
+        .single();
+
+      if (error || !renewedIntent) {
+        throw new Error(`Failed to refresh expired payment intent: ${error?.message}`);
       }
-      // Proceed down to generate a fresh intent rather than returning stale expired intent
+
+      await supabase.from("payment_state_history").insert({
+        payment_intent_id: renewedIntent.id,
+        from_state: existingIntent.status,
+        to_state: "CREATED",
+        reason: "Payment intent re-initialized with fresh session",
+        actor_type: "MERCHANT",
+        actor_id: params.merchantId,
+      });
+
+      return { intent: renewedIntent as PaymentIntentRecord, isNew: true };
     } else {
       return { intent: existingIntent as PaymentIntentRecord, isNew: false };
     }
   }
 
-  // 2. Generate unique IDs
+  // 2. Generate unique IDs for brand-new intent
   const paymentIntentId = `pi_${crypto.randomBytes(16).toString("hex")}`;
   const sessionId = `cs_${crypto.randomBytes(20).toString("hex")}`;
-
-  // Default expiry: 15 minutes (900 seconds)
-  const expirySecs = params.expiresInSeconds || 900;
-  const expiresAt = new Date(Date.now() + expirySecs * 1000).toISOString();
 
   // 3. Insert record
   const { data: createdIntent, error } = await supabase
