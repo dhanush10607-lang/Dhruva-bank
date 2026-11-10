@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { authorizeCheckoutPayment } from "./actions";
 import { ShieldCheck, Lock, AlertCircle, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,27 +15,52 @@ export default function CheckoutClient({ session, accounts, userProfile }: Check
   const [state, formAction, isPending] = useActionState(authorizeCheckoutPayment, null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || "");
   const [mpin, setMpin] = useState<string>("");
+  const [countdown, setCountdown] = useState<number>(3);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
   const isInsufficient = selectedAccount ? Number(selectedAccount.balance) < Number(session.amount) : true;
+  const isSuccess = Boolean(state?.success || session.status === "SUCCEEDED");
 
-  if (state?.success || session.status === "SUCCEEDED") {
-    const successReturnUrl = new URL(session.success_url);
-    successReturnUrl.searchParams.set("status", "SUCCESS");
-    successReturnUrl.searchParams.set("payment_id", state?.paymentIntentId || session.payment_intent_id);
-    if (state?.transactionRef) {
-      successReturnUrl.searchParams.set("txn_ref", state.transactionRef);
-    }
+  const successReturnUrl = new URL(session.success_url);
+  successReturnUrl.searchParams.set("status", "SUCCESS");
+  successReturnUrl.searchParams.set("payment_id", state?.paymentIntentId || session.payment_intent_id);
+  if (state?.transactionRef) {
+    successReturnUrl.searchParams.set("txn_ref", state.transactionRef);
+  }
+  const redirectTarget = successReturnUrl.toString();
 
+  useEffect(() => {
+    if (!isSuccess) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          window.location.href = redirectTarget;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isSuccess, redirectTarget]);
+
+  if (isSuccess) {
     return (
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 text-center shadow-xl">
-        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
           <CheckCircle2 size={36} />
         </div>
         <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">Payment Authorized!</h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
           Your simulated payment of ₹{Number(session.amount).toLocaleString("en-IN")} to RailConnect has completed successfully.
         </p>
+
+        <div className="my-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-xs font-semibold">
+          <Loader2 size={14} className="animate-spin" />
+          Auto-redirecting to RailConnect in {countdown}s...
+        </div>
 
         <div className="my-6 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-left text-sm space-y-2">
           <div className="flex justify-between">
@@ -55,10 +80,10 @@ export default function CheckoutClient({ session, accounts, userProfile }: Check
         </div>
 
         <a
-          href={successReturnUrl.toString()}
+          href={redirectTarget}
           className="inline-flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md shadow-blue-600/20 transition-colors"
         >
-          Return to RailConnect
+          Return to RailConnect Now
           <ArrowRight size={18} />
         </a>
       </div>
