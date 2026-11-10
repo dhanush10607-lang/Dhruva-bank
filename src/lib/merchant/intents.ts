@@ -56,7 +56,19 @@ export async function createPaymentIntent(
     .maybeSingle();
 
   if (existingIntent) {
-    return { intent: existingIntent as PaymentIntentRecord, isNew: false };
+    // If an existing intent is found but has expired or failed, allow creating a fresh one
+    const isExpired = new Date(existingIntent.expires_at) <= new Date();
+    if (existingIntent.status === "EXPIRED" || isExpired || existingIntent.status === "FAILED") {
+      if (existingIntent.status !== "EXPIRED" && isExpired) {
+        await supabase
+          .from("merchant_payment_intents")
+          .update({ status: "EXPIRED", updated_at: new Date().toISOString() })
+          .eq("id", existingIntent.id);
+      }
+      // Proceed down to generate a fresh intent rather than returning stale expired intent
+    } else {
+      return { intent: existingIntent as PaymentIntentRecord, isNew: false };
+    }
   }
 
   // 2. Generate unique IDs
